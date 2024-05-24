@@ -1,0 +1,23 @@
+{
+  "Cancel": "Cancel",
+  "Child": "Child",
+  "Description": "Description",
+  "Detailed description": "Detailed description",
+  "Email": "Email",
+  "Image Url": "Image Url",
+  "Image url to display the image": "Image url to display the image",
+  "Images": "Images",
+  "Jump to Table Row": "Jump to Table Row",
+  "Meta description": "Meta description",
+  "Meta description used for all kind of searching": "Meta description used for all kind of searching",
+  "Name": "Name",
+  "Parent": "Parent",
+  "Password": "Password",
+  "Save": "Save",
+  "Short and meaningful description": "Short and meaningful description",
+  "Short description": "Short description",
+  "Store": "Store",
+  "Texts": "Texts",
+  "module_form_ensure_create_instance": "Some fields will only be shown if the object was created successfully.",
+  "zzz": "zzz"
+}

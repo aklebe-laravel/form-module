@@ -1,0 +1,9 @@
+<?php
+
+namespace Modules\${{module_name}}\app\Http\Livewire\Form;
+
+use Modules\Form\app\Http\Livewire\Form\Base\ModelBase;
+
+class ${{class_name}} extends ModelBase
+{
+}
