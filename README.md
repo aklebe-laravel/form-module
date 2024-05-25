@@ -1,7 +1,7 @@
 ## Form
 
-A module for [Mercy Scaffold Application](https://github.com/AKlebeLaravel/MercyScaffold.git)
-(or any based on it like [Jumble Sale](https://github.com/AKlebeLaravel/JumbleSale.git)).
+A module for [Mercy Scaffold Application](https://github.com/aklebe-laravel/mercy-scaffold.git)
+(or any based on it like [Jumble Sale](https://github.com/aklebe-laravel/jumble-sale.git)).
 
 This module will provide frontend forms with the following features
 
