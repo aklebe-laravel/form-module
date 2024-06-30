@@ -39,6 +39,9 @@ class NativeObjectBase
 
     /**
      * Can be overwritten by livewire form components to prepare the element views.
+
+     * @todo: 'default' is questionable especially if value is false, maybe remove 'default' this way
+     * @todo: defaults should set by overriding makeObjectModelInstanceDefaultValues()
      *
      * @var array
      */
@@ -232,8 +235,8 @@ class NativeObjectBase
 
                         if ($password === $confirmPassword) {
 
-                            // hash the password ...
-                            $data[$key] = Hash::make($password);
+                            // no need to hash the password, its done implicit by user $casts
+                            $data[$key] = $password;
 
                             // delete the confirmation
                             unset($data[$confirmPasswordKey]);
@@ -588,6 +591,7 @@ class NativeObjectBase
          * 1) direct set by form field viewData['value']
          * 2) from jsonResource (if not null)
          * 3) form field viewData['default']
+         * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
          */
         $value = data_get($viewData, 'value') ?: $resourcePrevValue ?? data_get($viewData, 'default', '');
 

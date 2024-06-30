@@ -672,6 +672,7 @@ class ModelBase extends NativeObjectBase
          * 1) direct set by form field viewData['value']
          * 2) from jsonResource
          * 3) viewData['default'] if given and value is empty
+         * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
          * @fixed: overwritten null wich was needed
          */
         $value = data_get($viewData, 'value') ?: $resourcePrevValue;;
