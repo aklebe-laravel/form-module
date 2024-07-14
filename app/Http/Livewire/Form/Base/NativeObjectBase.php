@@ -18,11 +18,6 @@ class NativeObjectBase extends BaseComponent
     use WithFileUploads;
 
     /**
-     * Restrictions to allow this component.
-     */
-    // public const aclResources = [AclResource::RES_DEVELOPER, AclResource::RES_ADMIN];
-
-    /**
      * The form is closed by default.
      *
      * @var bool
@@ -154,34 +149,28 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * Runs once, immediately after the component is instantiated, but before render() is called.
-     * This is only called once on initial page load and never called again, even on component refreshes
-     *
-     * We need at least mount() to show initial form (if wanted by url param or something)
-     * To avoid hiding we use booted()
-     * booted() issues for next
-     *
      * @return void
-     * @todo: mount() or booted() ???
      */
     protected function initMount(): void
     {
         parent::initMount();
 
-        // If initial form should be open once ...
-        if ($this->isFormOpen) {
-            $this->openForm($this->formObjectId, false);
-        }
-
+        /**
+         * @internal If place it in boot or hydrate, we get js console error "Uncaught Component not found: xxx"
+         * and nothing is working anymore. So mount can be the only valid place.
+         */
+        $this->reopenFormIfNeeded();
     }
 
     /**
      * @return void
      */
-    protected function initHydrate(): void
+    public function resetMessages(): void
     {
-        parent::initHydrate();
-        // ...
+        parent::resetMessages();
+
+        // @todo: perform this way?!
+        $this->reopenFormIfNeeded();
     }
 
     /**
@@ -278,6 +267,25 @@ class NativeObjectBase extends BaseComponent
         return $this->_formResult;
     }
 
+    /**
+     * @return bool
+     */
+    protected function isFormCreated() : bool
+    {
+        return (bool)$this->_formResult;
+    }
+
+    /**
+     * @param  bool  $forceReset
+     * @return void
+     */
+    protected function reopenFormIfNeeded(bool $forceReset = false): void
+    {
+        if ($this->isFormOpen && !$this->isFormCreated()) {
+            $this->openForm($this->formObjectId, $forceReset);
+        }
+    }
+
     protected function getComponentFormName(): string
     {
         return 'form.'.\Illuminate\Support\Str::snake($this->getFormName(), '-');
@@ -298,13 +306,13 @@ class NativeObjectBase extends BaseComponent
 
     /**
      * @param $id
-     * @param  bool  $reset
+     * @param  bool  $forceReset
      * @return void
      */
     #[On('open-form')]
-    public function openForm($id, bool $reset = true): void
+    public function openForm($id, bool $forceReset = true): void
     {
-        if ($reset) {
+        if ($forceReset) {
             $this->resetFormResult();
             $this->formObjectAsArray = [];
         }

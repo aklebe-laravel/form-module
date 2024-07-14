@@ -243,7 +243,7 @@ class NativeObjectBase
 
                         } else {
                             // error, not equal ...
-                            $jsonResponse->setErrorMessage("Password is not equal the confirmation.");
+                            $jsonResponse->setErrorMessage(__("Password is not equal the confirmation."));
 
                             return $validateData;
                         }
@@ -252,7 +252,7 @@ class NativeObjectBase
 
                         // Password field was set, but not the confirmation ...
                         if ($password) {
-                            $jsonResponse->setErrorMessage("Missing the confirmation password.");
+                            $jsonResponse->setErrorMessage(__("Missing the confirmation password."));
                             return $validateData;
                         }
                     }

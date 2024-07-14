@@ -226,9 +226,15 @@ class ModelBase extends NativeObjectBase
             $objectInstance = $this->makeObjectModelInstance($cleanData);
 
             $this->onBeforeUpdateItem($itemData, $jsonResponse, $objectInstance);
-            $objectInstance->save();
 
-            $updateResult['created'] = $objectInstance->getKey();
+            try {
+                if ($objectInstance->save()) {
+                    $updateResult['created'] = $objectInstance->getKey();
+                }
+            } catch (Exception $exception) {
+                $jsonResponse->setErrorMessage($exception->getMessage());
+            }
+
 
         } else {
 
@@ -247,10 +253,13 @@ class ModelBase extends NativeObjectBase
                 unset($objectInstance->relatedPivotModelId);
 
                 // Update main data (with $cleanData)
-                if ($objectInstance->updateTimestamps()->update($cleanData)) {
-                    $updateResult['updated'] = $objectInstance->getKey();
+                try {
+                    if ($objectInstance->updateTimestamps()->update($cleanData)) {
+                        $updateResult['updated'] = $objectInstance->getKey();
+                    }
+                } catch (Exception $exception) {
+                    $jsonResponse->setErrorMessage($exception->getMessage());
                 }
-
             }
         }
 

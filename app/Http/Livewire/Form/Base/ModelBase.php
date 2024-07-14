@@ -72,7 +72,6 @@ class ModelBase extends NativeObjectBase
     protected function getForm(): ?JsonResource
     {
         if (!$this->isFormOpen) {
-
             return null;
         }
 
@@ -267,7 +266,7 @@ class ModelBase extends NativeObjectBase
      * @param  mixed  $itemId
      * @return void
      */
-    public function save(mixed $livewireId, mixed $itemId)
+    public function save(mixed $livewireId, mixed $itemId): void
     {
         if (!$this->checkLivewireId($livewireId)) {
             return;
@@ -275,16 +274,21 @@ class ModelBase extends NativeObjectBase
 
         $res = $this->saveFormData();
         if (!$res->hasErrors()) {
+            $this->addSuccessMessage(__('Data saved successfully.'));
 
-            // Do not close form if no table present (like user profile)
+            // If related datatable exists, we want to close the form.
+            // Otherwise, do not close form if no table present (like user profile)
             if ($this->relatedLivewireDataTable) {
                 $this->closeFormAndRefreshDatatable();
+            } else {
+                $this->reopenFormIfNeeded(true);
             }
-
         } else {
             $this->addErrorMessages($res->getErrors());
-        }
 
+            // Open this form again (with errors)!
+            $this->reopenFormIfNeeded();
+        }
     }
 
     /**
@@ -357,7 +361,7 @@ class ModelBase extends NativeObjectBase
     #[On('upload-process-finished')]
     public function uploadProcessFinished(string $event, mixed $mediaItemId): void
     {
-        $this->openForm($this->formObjectId, false);
+        $this->reopenFormIfNeeded();
     }
 
 }

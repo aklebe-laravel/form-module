@@ -36,8 +36,8 @@
         {{--Scroll to Form on every update/open/visible--}}
         <div x-show="scrollToForm();"></div>
 
-        @if ($_formErrors)
-            <div class="alert alert-warning">Issues in: {{ 'default-model-base.blade.php' }}</div>
+        @if ($_formErrors && config('app.debug', false))
+            <div class="alert alert-danger">Form <strong>isFormOpen = true</strong>, but issues in: {{ 'default-model-base.blade.php' }}</div>
             @foreach($_formErrors as $_formError)
                 <div class="alert alert-warning">{{ $_formError }}</div>
             @endforeach
