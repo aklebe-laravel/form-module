@@ -26,7 +26,11 @@
     $themeService = app(ThemeService::class);
 
     $folder = data_get($options, 'path', '');
-    $files = $themeService->getFilesFromTheme($folder);
+    $directoryDeep = (int)data_get($options, 'directory_deep', 0);
+    $regexWhitelist = data_get($options, 'regex_whitelist', []);
+    $regexBlacklist = data_get($options, 'regex_blacklist', []);
+    $addDelimiters = data_get($options, 'add_delimiters', '');
+    $files = $themeService->getFilesFromTheme($folder, '', $directoryDeep, $regexWhitelist, $regexBlacklist, $addDelimiters);
 
 @endphp
 @if ($files)
