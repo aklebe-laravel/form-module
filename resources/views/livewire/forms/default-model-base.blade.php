@@ -76,7 +76,7 @@
                         </div>
                         @if ($showFormActions)
                             <hr/>
-                            <div class="container">
+                            <div class="container form-actions">
                                 <div class="row">
                                     <div class="col-12 text-end">
                                         @foreach($this->formActionButtons as $formActionButtonView)

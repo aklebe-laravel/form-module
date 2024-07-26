@@ -6,4 +6,4 @@
      */
 @endphp
 <button wire:click="{{ $this->getDefaultWireFormCancel() }}" type="button"
-        class="btn btn-outline-secondary">{{ $cancelLabel ?? __("Cancel") }}</button>
+        class="btn btn-outline-secondary form-action-cancel">{{ $cancelLabel ?? __("Cancel") }}</button>

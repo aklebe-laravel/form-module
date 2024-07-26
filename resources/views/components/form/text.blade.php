@@ -43,6 +43,7 @@
                     type="{{ $type ?? 'text' }}"
                     name="{{ $name }}"
                     @if($id) id="{{ $id }}" @endif
+                    @if($dusk) dusk="{{ $dusk }}" @endif
                     class="form-control {{ $css_classes }}"
                     @if($livewire) wire:model="{{ $livewire . '.' . $name }}" @endif
                     value="{{ !$_isPassword ? $value : '' }}"

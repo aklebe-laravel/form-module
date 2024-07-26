@@ -6,4 +6,4 @@
      */
 @endphp
 <button wire:click="{{ $this->getDefaultWireFormAccept() }}" type="button"
-        class="btn btn-primary">{{ $acceptLabel ?? __("Accept") }}</button>
+        class="btn btn-primary form-action-accept">{{ $acceptLabel ?? __("Accept") }}</button>

@@ -5,7 +5,6 @@ namespace Modules\Form\app\Forms\Base;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -39,7 +38,7 @@ class NativeObjectBase
 
     /**
      * Can be overwritten by livewire form components to prepare the element views.
-
+     *
      * @todo: 'default' is questionable especially if value is false, maybe remove 'default' this way
      * @todo: defaults should set by overriding makeObjectModelInstanceDefaultValues()
      *
@@ -65,6 +64,7 @@ class NativeObjectBase
         'visible'       => true,
         'x_data'        => [],
         'x_model'       => null,
+        'dusk'          => null,
     ];
 
     /**
@@ -174,9 +174,9 @@ class NativeObjectBase
     /**
      * Complex validation of data (from frontend json mostly)
      *
-     * @param  array  $data
+     * @param  array             $data
      * @param  JsonViewResponse  $jsonResponse
-     * @param  array  $additionalValidateFormat
+     * @param  array             $additionalValidateFormat
      *
      * @return array
      * @throws ValidationException
@@ -313,7 +313,7 @@ class NativeObjectBase
     /**
      * Loop all nested form elements.
      *
-     * @param  callable  $callBackElement
+     * @param  callable    $callBackElement
      * @param  array|null  $formElementsRoot  null lassen, um den Root von $this->getFormElements() zu benutzen
      *
      * @return array
@@ -428,7 +428,7 @@ class NativeObjectBase
     }
 
     /**
-     * @param  array  $itemData
+     * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
      * @return false[]
      */
@@ -446,9 +446,9 @@ class NativeObjectBase
      *
      * @TODO: 'id' should be dynamically
      *
-     * @param  array  $itemData
+     * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
-     * @param  mixed  $objectInstance
+     * @param  mixed             $objectInstance
      * @return bool
      */
     public function onAfterUpdateItem(array $itemData, JsonViewResponse $jsonResponse, mixed $objectInstance): bool
@@ -460,9 +460,9 @@ class NativeObjectBase
      * Event before object was saved.
      * Should be called to preset stuff.
      *
-     * @param  array  $itemData
+     * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
-     * @param  mixed  $objectInstance
+     * @param  mixed             $objectInstance
      * @return bool
      */
     public function onBeforeUpdateItem(array $itemData, JsonViewResponse $jsonResponse, mixed $objectInstance): bool
@@ -484,7 +484,7 @@ class NativeObjectBase
 
     /**
      * @param  JsonResource|null  $jsonResource
-     * @param  string  $displayKey
+     * @param  string             $displayKey
      * @return string
      */
     protected function makeFormTitle(?JsonResource $jsonResource, string $displayKey): string
@@ -516,7 +516,7 @@ class NativeObjectBase
      * Check whether value is a $cast attribute we have to transform it before view (like json)
      *
      * @param  string  $name
-     * @param  mixed  $value
+     * @param  mixed   $value
      * @return false|mixed|string
      */
     protected function checkViewDataCastAttributeValue(string $name, mixed $value): mixed
@@ -543,8 +543,8 @@ class NativeObjectBase
      *
      * @param  string  $element
      * @param  string  $name
-     * @param  array  $options
-     * @param  array  $parentOptions
+     * @param  array   $options
+     * @param  array   $parentOptions
      *
      * @return array
      */
@@ -591,6 +591,7 @@ class NativeObjectBase
          * 1) direct set by form field viewData['value']
          * 2) from jsonResource (if not null)
          * 3) form field viewData['default']
+         *
          * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
          */
         $value = data_get($viewData, 'value') ?: $resourcePrevValue ?? data_get($viewData, 'default', '');
@@ -622,9 +623,9 @@ class NativeObjectBase
 
     /**
      * @param  string|callable  $element
-     * @param  string  $name
-     * @param  array  $options
-     * @param  array  $parentOptions
+     * @param  string           $name
+     * @param  array            $options
+     * @param  array            $parentOptions
      * @return string
      */
     public function renderElement(string|callable $element, string $name, $options = [], $parentOptions = []): string

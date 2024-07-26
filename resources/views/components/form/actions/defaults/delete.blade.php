@@ -12,5 +12,5 @@
 @if ($itemId)
     <button x-on:click="messageBox.show('__default__.data-table.delete', {'delete-item': {livewire_id: '{{ $this->getId() }}', name: '{{ $this->getName() }}', item_id: {{ $itemId }}}})"
             type="button"
-            class="btn btn-danger">{{ $acceptLabel ?? __("Delete") }}</button>
+            class="btn btn-danger form-action-delete">{{ $acceptLabel ?? __("Delete") }}</button>
 @endif
