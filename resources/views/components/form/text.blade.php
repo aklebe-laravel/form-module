@@ -26,6 +26,7 @@
      */
 
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
+    $attributes ??= [];
     $icon ??= null;
     $type = $type ?? null;
     $_isPassword = ($type === 'password');
@@ -54,6 +55,7 @@
                     @if(!$auto_complete) autocomplete="{{ $_isPassword ? 'new-password' : 'off' }}" @endif
                     @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
                     @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
+                    @foreach($attributes as $k => $v) {{ $k }}="{{ $v }}" @endforeach
             />
             @if ($icon)
                 <span class="input-group-append">
