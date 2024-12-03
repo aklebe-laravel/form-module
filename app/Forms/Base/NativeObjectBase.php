@@ -40,7 +40,7 @@ class NativeObjectBase
      * Can be overwritten by livewire form components to prepare the element views.
      *
      * @todo: 'default' is questionable especially if value is false, maybe remove 'default' this way
-     * @todo: defaults should set by overriding makeObjectModelInstanceDefaultValues()
+     * @todo: defaults should set by overriding makeObjectInstanceDefaultValues()
      *
      * @var array
      */
@@ -130,6 +130,15 @@ class NativeObjectBase
     ];
 
     /**
+     * Default values to create new object (or model) instance.
+     *
+     * Used by makeObjectInstanceDefaultValues()
+     *
+     * @var array
+     */
+    public array $objectInstanceDefaultValues = [];
+
+    /**
      * Overwrite for extra logic.
      *
      * @param  mixed|null  $id
@@ -140,6 +149,18 @@ class NativeObjectBase
     {
         $this->jsonResource = $this->jsonResource ?: new JsonResource([]);
         return $this->jsonResource;
+    }
+
+    /**
+     * Default values to create new object model instance.
+     * Overwrite this by calling parent::makeObjectInstanceDefaultValues()
+     * or overwrite $this->objectInstanceDefaultValues.
+     *
+     * @return array
+     */
+    public function makeObjectInstanceDefaultValues(): array
+    {
+        return $this->objectInstanceDefaultValues;
     }
 
     /**
@@ -730,8 +751,8 @@ class NativeObjectBase
     public function getOwnerUserId(): mixed
     {
         // 1) Autodetect: Check whether there is an existing user_id ...
-        if ($this->jsonResource && $this->jsonResource->user_id ?? null) {
-            return $this->jsonResource->user_id;
+        if ($this->jsonResource && data_get($this->jsonResource, 'user_id')) {
+            return data_get($this->jsonResource, 'user_id');
         }
 
         // 2) Check parent id (should be user object)
@@ -741,7 +762,7 @@ class NativeObjectBase
         }
 
         // 3) Try to get user_id by assigned default values
-        return data_get($this->objectModelInstanceDefaultValues, 'user_id', 0);
+        return data_get($this->objectInstanceDefaultValues, 'user_id', 0);
     }
 
     /**

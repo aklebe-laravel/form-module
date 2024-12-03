@@ -46,15 +46,6 @@ class ModelBase extends NativeObjectBase
     protected array $objectRelations = [];
 
     /**
-     * Default values to create new object model instance.
-     *
-     * Used by makeObjectModelInstanceDefaultValues()
-     *
-     * @var array
-     */
-    public array $objectModelInstanceDefaultValues = [];
-
-    /**
      * Get the form by model name without namespace and find namespace automatically.
      * See Modules/Form/Config/config.php for details.
      *
@@ -570,25 +561,13 @@ class ModelBase extends NativeObjectBase
     }
 
     /**
-     * Default values to create new object model instance.
-     * Overwrite this by calling parent::makeObjectModelInstanceDefaultValues()
-     * or overwrite $this->objectModelInstanceDefaultValues.
-     *
-     * @return array
-     */
-    public function makeObjectModelInstanceDefaultValues(): array
-    {
-        return $this->objectModelInstanceDefaultValues;
-    }
-
-    /**
      * @param  array  $data
      *
      * @return Model
      */
     public function makeObjectModelInstance(array $data = []): Model
     {
-        $d = $this->makeObjectModelInstanceDefaultValues();
+        $d = $this->makeObjectInstanceDefaultValues();
         $d = app('system_base')->arrayMergeRecursiveDistinct($d, $data);
 
         /** @var Model $objectInstance */
