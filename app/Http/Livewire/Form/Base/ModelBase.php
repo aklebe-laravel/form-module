@@ -47,7 +47,7 @@ class ModelBase extends NativeObjectBase
      *
      * @var array
      */
-    public array $objectModelInstanceDefaultValues = [];
+    public array $objectInstanceDefaultValues = [];
 
     /**
      * @return string
@@ -89,8 +89,8 @@ class ModelBase extends NativeObjectBase
         $this->_form->setLiveWireId($this->getId());
 
         // assign default values for object model instance
-        $this->_form->objectModelInstanceDefaultValues = app('system_base')->arrayMergeRecursiveDistinct($this->_form->objectModelInstanceDefaultValues,
-            $this->objectModelInstanceDefaultValues);
+        $this->_form->objectInstanceDefaultValues = app('system_base')->arrayMergeRecursiveDistinct($this->_form->objectInstanceDefaultValues,
+            $this->objectInstanceDefaultValues);
 
         // calculate and render form
         $this->_formResult = $this->_form->renderWithResource($this->formObjectId);

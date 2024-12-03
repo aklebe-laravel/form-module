@@ -17,6 +17,10 @@ class NativeObjectBase extends BaseComponent
 {
     use WithFileUploads;
 
+    const formModeDefault = 'DEFAULT';
+    const formModeImport = 'IMPORT';
+    const formModeExport = 'EXPORT';
+
     /**
      * The form is closed by default.
      *
@@ -270,9 +274,9 @@ class NativeObjectBase extends BaseComponent
     /**
      * @return bool
      */
-    protected function isFormCreated() : bool
+    protected function isFormCreated(): bool
     {
-        return (bool)$this->_formResult;
+        return (bool) $this->_formResult;
     }
 
     /**
@@ -305,7 +309,7 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * @param $id
+     * @param        $id
      * @param  bool  $forceReset
      * @return void
      */
