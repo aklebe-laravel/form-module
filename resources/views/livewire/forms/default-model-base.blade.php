@@ -56,7 +56,7 @@
                             <span class="decent">{{ $title }}</span>
                             @else
                                 @if($editFormModelObject && $editFormModelObject->id)
-                                    <span class="decent">{{ __($this->getModelName()) }}</span>
+                                    <span class="decent">{{ __($this->getEloquentModelName()) }}</span>
                                     @if ($readonly)
                                         - <span class="decent">{{ __("ID") }}: {{ $editFormModelObject->id }}</span>
                                     @endif
