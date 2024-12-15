@@ -24,7 +24,7 @@ class ModelBase extends NativeObjectBase
      *
      * @var string
      */
-    public string $modelName = '';
+    public string $eloquentModelName = '';
 
     /**
      * The relation ids from sub data-table grids indexed by property name
@@ -52,13 +52,13 @@ class ModelBase extends NativeObjectBase
     /**
      * @return string
      */
-    public function getModelName(): string
+    public function getEloquentModelName(): string
     {
-        if (!$this->modelName) {
-            $this->modelName = $this->getFormName();
+        if (!$this->eloquentModelName) {
+            $this->eloquentModelName = $this->getFormName();
         }
 
-        return $this->modelName;
+        return $this->eloquentModelName;
     }
 
     /**
@@ -120,7 +120,7 @@ class ModelBase extends NativeObjectBase
     #[On('duplicate-and-open-form')]
     public function duplicateAndOpenForm($id): void
     {
-        if ($item = app('system_base')->getEloquentModelBuilder($this->getModelName())->whereKey($id)->first()) {
+        if ($item = app('system_base')->getEloquentModelBuilder($this->getEloquentModelName())->whereKey($id)->first()) {
 
             $methodReplicateRelations = 'replicateWithRelations';
             if (method_exists($item, $methodReplicateRelations)) {
