@@ -1,7 +1,7 @@
 {
     "name": "Form",
     "alias": "form",
-    "description": "Form",
+    "description": "Provides frontend forms for custom objects or eloquent models and their relations.",
     "keywords": [],
     "priority": 1200,
     "providers": [

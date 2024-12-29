@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Modules\Acl\app\Models\AclResource;
 use Modules\Acl\app\Services\UserService;
+use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 use Modules\SystemBase\app\Models\JsonViewResponse;
 
 /**
@@ -19,7 +21,21 @@ class NativeObjectBase
     /**
      * default index of unselected item in select boxes
      */
-    const UNSELECT_RELATION_IDENT = -1;
+    const int UNSELECT_RELATION_IDENT = -1;
+
+    /**
+     * Nested assoc array of elements updated by livewire updating()
+     *
+     * @var array
+     */
+    public array $liveUpdate = [];
+
+    public ?NativeObjectBaseLivewire $formLivewire = null;
+
+    /**
+     * @var array
+     */
+    public array $activeTabs = [];
 
     /**
      * The parent livewire ID if present.
@@ -45,26 +61,29 @@ class NativeObjectBase
      * @var array
      */
     public array $defaultViewData = [
-        'auto_complete' => true,
-        'css_classes'   => '',
-        'css_group'     => '',
-        'default'       => '',
-        'description'   => '',
-        'disabled'      => false,
-        'element_index' => 0,
-        'html_data'     => [],
-        'options'       => [],
-        'icon'          => null,
-        'id'            => '',
-        'label'         => '',
-        'livewire'      => '',
-        'name'          => '',
-        'read_only'     => false,
-        'value'         => '',
-        'visible'       => true,
-        'x_data'        => [],
-        'x_model'       => null,
-        'dusk'          => null,
+        'auto_complete'     => true,
+        'css_classes'       => '',
+        'css_group'         => '',
+        'default'           => '',
+        'description'       => '',
+        'disabled'          => false,
+        'dusk'              => null,
+        'element_index'     => 0,
+        'html_data'         => [],
+        'icon'              => null,
+        'id'                => '',
+        'label'             => '',
+        'label_limit'       => 50,
+        'livewire'          => '',
+        'livewire_live'     => false,
+        'livewire_debounce' => 750, // (in ms, but without suffix 'ms' here) only used when livewire_live=true
+        'name'              => '',
+        'options'           => [],
+        'read_only'         => false,
+        'value'             => '',
+        'visible'           => true,
+        'x_data'            => [],
+        'x_model'           => null,
     ];
 
     /**
@@ -126,7 +145,7 @@ class NativeObjectBase
      * @var array|string[]
      */
     protected array $forceValidElementFields = [
-        '__confirm__password'
+        '__confirm__password',
     ];
 
     /**
@@ -148,6 +167,7 @@ class NativeObjectBase
     public function getJsonResource(mixed $id = null): JsonResource
     {
         $this->jsonResource = $this->jsonResource ?: new JsonResource([]);
+
         return $this->jsonResource;
     }
 
@@ -175,10 +195,7 @@ class NativeObjectBase
         foreach ($data as $keyOriginal => $valueOriginal) {
 
             // Brackets to dots ...
-            $keyModified = str_replace([
-                '][',
-                '['
-            ], '.', $keyOriginal);
+            $keyModified = str_replace(['][', '[',], '.', $keyOriginal);
             $keyModified = str_replace([']'], '', $keyModified);
 
             // ... dots to array ...
@@ -211,9 +228,7 @@ class NativeObjectBase
         }
 
         // Get the validate FORMAT for each element ...
-        $validateFormat = $this->runFormElements(function ($formElement, $key) use (
-            $validatorPrefix, &$data, $jsonResponse
-        ) {
+        $validateFormat = $this->runFormElements(function ($formElement, $key) use ($validatorPrefix, &$data, $jsonResponse) {
             $validateData = [];
 
             // @todo: check for uniques like email ...
@@ -274,6 +289,7 @@ class NativeObjectBase
                         // Password field was set, but not the confirmation ...
                         if ($password) {
                             $jsonResponse->setErrorMessage(__("Missing the confirmation password."));
+
                             return $validateData;
                         }
                     }
@@ -394,7 +410,7 @@ class NativeObjectBase
     {
         $resource = $this->getJsonResource($id);
         $formObject = $this->getFormElements();
-        $html = $this->renderElement('full_form', '', $formObject, []);
+        $html = $this->renderElement('full_form', '', $formObject);
 
         $resource->additional = [
             'form_html'   => $html,
@@ -415,7 +431,7 @@ class NativeObjectBase
         $jsonResponse = new JsonViewResponse($this->objectFrontendLabel.' aktualisiert.');
         $successData = [
             'created' => [],
-            'updated' => []
+            'updated' => [],
         ];
         foreach ($items as $item) {
 
@@ -436,11 +452,13 @@ class NativeObjectBase
         }
 
         $jsonResponse->setData($successData);
+
         return $jsonResponse;
     }
 
     /**
      * @param  array  $itemData
+     *
      * @return array
      */
     public function getCleanObjectDataForSaving(array $itemData): array
@@ -451,6 +469,7 @@ class NativeObjectBase
     /**
      * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
+     *
      * @return false[]
      */
     public function updateItem(array $itemData, JsonViewResponse $jsonResponse): array
@@ -470,6 +489,7 @@ class NativeObjectBase
      * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
      * @param  mixed             $objectInstance
+     *
      * @return bool
      */
     public function onAfterUpdateItem(array $itemData, JsonViewResponse $jsonResponse, mixed $objectInstance): bool
@@ -484,6 +504,7 @@ class NativeObjectBase
      * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
      * @param  mixed             $objectInstance
+     *
      * @return bool
      */
     public function onBeforeUpdateItem(array $itemData, JsonViewResponse $jsonResponse, mixed $objectInstance): bool
@@ -506,6 +527,7 @@ class NativeObjectBase
     /**
      * @param  JsonResource|null  $jsonResource
      * @param  string             $displayKey
+     *
      * @return string
      */
     protected function makeFormTitle(?JsonResource $jsonResource, string $displayKey): string
@@ -521,23 +543,11 @@ class NativeObjectBase
     }
 
     /**
-     * @param  JsonResource|null  $jsonResource
-     * @return JsonResource
-     */
-    public function getValidObject(?JsonResource $jsonResource): JsonResource
-    {
-        if ($jsonResource && data_get($jsonResource, $jsonResource->getKeyName())) {
-            return $jsonResource;
-        }
-
-        return $this->getJsonResource();
-    }
-
-    /**
      * Check whether value is a $cast attribute we have to transform it before view (like json)
      *
      * @param  string  $name
      * @param  mixed   $value
+     *
      * @return false|mixed|string
      */
     protected function checkViewDataCastAttributeValue(string $name, mixed $value): mixed
@@ -569,8 +579,7 @@ class NativeObjectBase
      *
      * @return array
      */
-    public function prepareFormViewData(string $element, string $name, array $options = [],
-        array $parentOptions = []): array
+    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = []): array
     {
         $parentName = data_get($parentOptions, 'name', '');
 
@@ -592,7 +601,7 @@ class NativeObjectBase
 
         // merge/inherit current data
         // @todo: why is arrayCopyWhitelisted() not enough?
-        $viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $options, false);
+        $viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $options);
 
         /**
          * get name by (first given wins)
@@ -623,11 +632,13 @@ class NativeObjectBase
 
         //
         $this->calculateCallableValues($viewData);
+
         return $viewData;
     }
 
     /**
      * @param  array  $viewData
+     *
      * @return void
      */
     protected function calculateCallableValues(array &$viewData): void
@@ -647,9 +658,10 @@ class NativeObjectBase
      * @param  string           $name
      * @param  array            $options
      * @param  array            $parentOptions
+     *
      * @return string
      */
-    public function renderElement(string|callable $element, string $name, $options = [], $parentOptions = []): string
+    public function renderElement(string|callable $element, string $name, array $options = [], array $parentOptions = []): string
     {
         if (app('system_base')->isCallableClosure($element)) {
             $element = $element();
@@ -719,7 +731,7 @@ class NativeObjectBase
         /** @var UserService $userService */
         $userService = app(UserService::class);
 
-        return $userService->hasUserResource(Auth::user(), \Modules\Acl\app\Models\AclResource::RES_MANAGE_USERS);
+        return $userService->hasUserResource(Auth::user(), AclResource::RES_MANAGE_USERS);
     }
 
     /**
@@ -767,6 +779,7 @@ class NativeObjectBase
 
     /**
      * @param  string  $id
+     *
      * @return void
      */
     public function setLiveWireId(string $id): void
@@ -778,6 +791,7 @@ class NativeObjectBase
      * $element can declared like "MyModule::textarea" or just "select"
      *
      * @param  string  $element
+     *
      * @return array
      */
     public function getElementModuleInfo(string $element): array
@@ -793,7 +807,7 @@ class NativeObjectBase
 
         return [
             'module'  => $attributeInputModule,
-            'element' => $attributeInput
+            'element' => $attributeInput,
         ];
     }
 

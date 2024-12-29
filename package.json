@@ -1,11 +1,12 @@
 {
-  "private": true,
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build"
-  },
-  "devDependencies": {
-    "lodash": "^4.17.21",
-    "postcss": "^8.3.7"
-  }
+    "private": true,
+    "description": "Provides frontend forms for custom objects or eloquent models and their relations.",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "lodash": "^4.17.21",
+        "postcss": "^8.3.7"
+    }
 }

@@ -1,5 +1,7 @@
 @php
-    /** @var \Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase $this */
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+
+    /** @var NativeObjectBase $this */
 
     $editForm = $this->getFormResult();
 
@@ -20,13 +22,15 @@
         {{--Scroll to Form on every update/open/visible--}}
         <div x-show="scrollToForm();"></div>
         @if($editFormHtml)
+            @include('form::inc.form-backdrop')
+
             <div class="card dt-edit-form {{ ($readonly) ? 'readonly' : 'editable' }}"
                  @if ($this->autoXData)
                      x-data="{form_data:$wire.formObjectAsArray}"
                  @endif
                  @if($this->canKeyEnterSendForm)
                      wire:keydown.enter="{{ $this->getDefaultWireFormAccept() }}"
-                 @endif
+                    @endif
             >
                 <div class="card-body">
                     @if ($title)
@@ -36,7 +40,7 @@
                     @endif
                     <div class="card-text">
                         @if ($description)
-                            <div class="alert alert-warning">
+                            <div class="alert alert-light">
                                 {{ $description }}
                             </div>
                         @endif

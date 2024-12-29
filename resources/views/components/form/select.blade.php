@@ -16,6 +16,8 @@
      * @var string $css_group
      * @var string $x_model optional for alpine.js
      * @var string $livewire
+     * @var bool $livewire_live
+     * @var int $livewire_debounce
      * @var array $html_data data attributes
      * @var array $x_data
      * @var int $element_index
@@ -23,16 +25,18 @@
      */
 
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
+    $_liveWireAttr = '';
+    if ($livewire) {
+        $_liveWireAttr = 'wire:model'.(($livewire_live) ? ('.live'.(($livewire_debounce) ? ('.debounce.'.$livewire_debounce.'ms') : '')) : '').'="'.$livewire.'.'.$name.'"';
+    }
 @endphp
 <div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label class="">{{ $label }}</label>
-    @endunless
+    @include('form::components.form.element-parts.label')
     <select
             name="{{ $name }}"
             class="form-select {{ $css_classes }}"
             @if($xModelName) x-model="{{ $xModelName }}" @endif
-            @if($livewire) wire:model="{{ $livewire . '.' . $name }}" @endif
+            @if($_liveWireAttr) {!! $_liveWireAttr !!} @endif
             @if ($wireIgnore ?? false) wire:ignore.self @endif
             @if($disabled) disabled="disabled" @endif
             @if($read_only) readonly @endif
@@ -62,7 +66,5 @@
             @endforeach
         @endunless
     </select>
-    @unless(empty($description))
-        <div class="form-text decent">{{ $description }}</div>
-    @endunless
+    @include('form::components.form.element-parts.description')
 </div>

@@ -1,4 +1,7 @@
 @php
+    use Illuminate\Http\Resources\Json\JsonResource;
+    use Modules\Form\app\Forms\Base\NativeObjectBase;
+
     /**
      * default input text element
      *
@@ -21,8 +24,8 @@
      * @var array $html_data data attributes
      * @var array $x_data
      * @var int $element_index
-     * @var Illuminate\Http\Resources\Json\JsonResource $object
-     * @var \Modules\Form\app\Forms\Base\ModelBase $form_instance
+     * @var JsonResource $object
+     * @var NativeObjectBase $form_instance
      */
 
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
@@ -32,10 +35,7 @@
     $_isPassword = ($type === 'password');
 @endphp
 <div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label>{{ $label }}</label>
-    @endunless
-
+    @include('form::components.form.element-parts.label')
     @if ($icon)
         <div class="input-group">
             @endif
@@ -55,7 +55,9 @@
                     @if(!$auto_complete) autocomplete="{{ $_isPassword ? 'new-password' : 'off' }}" @endif
                     @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
                     @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
-                    @foreach($attributes as $k => $v) {{ $k }}="{{ $v }}" @endforeach
+            @foreach($attributes as $k => $v)
+                {{ $k }}="{{ $v }}"
+            @endforeach
             />
             @if ($icon)
                 <span class="input-group-append">
@@ -68,12 +70,5 @@
             @if ($icon)
         </div>
     @endif
-
-    <div class="form-text decent">
-        @if(!empty($description))
-            {{ $description }}
-        @else
-            &nbsp;
-        @endif
-    </div>
+    @include('form::components.form.element-parts.description')
 </div>

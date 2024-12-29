@@ -1,7 +1,10 @@
 @php
+    use Illuminate\Database\Eloquent\Model;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+
     /**
-     * @var \Modules\Form\app\Http\Livewire\Form\Base\ModelBase $this
-     * @var Illuminate\Database\Eloquent\Model $editFormModelObject
+     * @var NativeObjectBase $this
+     * @var Model $editFormModelObject
      * @var string $acceptLabel
      */
     $acceptLabel = __('Save');

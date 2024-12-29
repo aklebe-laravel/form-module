@@ -2,24 +2,24 @@
 
 namespace Modules\Form\app\Http\Livewire\Form\Base;
 
+use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\WithFileUploads;
-use Modules\Form\app\Forms\Base\ModelBase;
+use Modules\Form\app\Forms\Base\NativeObjectBase as NativeObjectBaseForm;
 use Modules\SystemBase\app\Http\Livewire\BaseComponent;
 use Modules\SystemBase\app\Models\JsonViewResponse;
 
 class NativeObjectBase extends BaseComponent
 {
     use WithFileUploads;
-
-    const formModeDefault = 'DEFAULT';
-    const formModeImport = 'IMPORT';
-    const formModeExport = 'EXPORT';
 
     /**
      * The form is closed by default.
@@ -83,6 +83,31 @@ class NativeObjectBase extends BaseComponent
     public array $formObjectAsArray = [];
 
     /**
+     * If given, it's the related datatable where this form is used to edit their items.
+     * Used to refresh the related datatable after edited this form.
+     *
+     * @var string
+     */
+    public string $relatedLivewireDataTable = '';
+
+    /**
+     * External assigned form default values
+     *
+     * @var array
+     */
+    public array $objectInstanceDefaultValues = [];
+
+    /**
+     * @var array
+     */
+    public array $liveUpdate = [];
+
+    /**
+     * @var array
+     */
+    public array $activeTabs = [];
+
+    /**
      * @var array|string[]
      */
     public array $formActionButtons = [
@@ -92,9 +117,9 @@ class NativeObjectBase extends BaseComponent
     ];
 
     /**
-     * @var \Modules\Form\app\Forms\Base\ModelBase|null
+     * @var NativeObjectBaseForm|null
      */
-    protected ?\Modules\Form\app\Forms\Base\NativeObjectBase $_form = null;
+    protected ?NativeObjectBaseForm $_form = null;
 
     /**
      * @var JsonResource|null
@@ -111,7 +136,23 @@ class NativeObjectBase extends BaseComponent
     public bool $autoXData = false;
 
     /**
-     * Overwrite this to setup the default Call if Enter pressed in Form
+     * @param $property
+     * @param $value
+     *
+     * @return void
+     */
+    public function updating($property, $value): void
+    {
+        Log::debug(__METHOD__, [$property, $value]);
+        $propertyPrepared = Str::chopStart($property, 'formObjectAsArray.');
+        if (Arr::has($this->getFormInstance()->liveUpdate, $propertyPrepared)) {
+            data_set($this->liveUpdate, $propertyPrepared, $value);
+            $this->reopenFormIfNeeded(true); // true is important to update all values!
+        }
+    }
+
+    /**
+     * Overwrite this to set up the default call if enter was pressed in form
      *
      * @return string
      */
@@ -127,7 +168,7 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * Overwrite this to setup the default Call if Esc pressed in Form
+     * Overwrite this to set up the default call if esc pressed in form
      *
      * @return string
      */
@@ -190,17 +231,26 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * @param  string  $formName
+     * Get the form by model name without namespace and find namespace automatically.
+     * See Modules/Form/Config/config.php for details.
      *
-     * @return ModelBase|mixed
+     * @param  string  $formName  just the form name without namespace
+     *
+     * @return NativeObjectBaseForm|null
      */
-    public function getFormInstance(string $formName = ''): mixed
+    public function getFormInstance(string $formName = ''): ?NativeObjectBaseForm
     {
-        if (!$formName) {
-            $formName = $this->getFormName();
+        if ($modelName = app('system_base')->findModuleClass($formName ?: $this->getFormName(), 'model-forms')) {
+            try {
+                return App::make($modelName);
+            } catch (Exception $e) {
+                Log::error($e->getMessage());
+            }
         }
-        return ModelBase::getFormInstance($formName);
+
+        return null;
     }
+
 
     /**
      * Overwrite if needed.
@@ -209,7 +259,6 @@ class NativeObjectBase extends BaseComponent
      */
     protected function beforeRender(): void
     {
-        //        $this->getForm();
     }
 
     /**
@@ -238,18 +287,27 @@ class NativeObjectBase extends BaseComponent
             return null;
         }
 
-        $this->_form = ModelBase::getFormInstance($this->getFormName());
+        $this->_form = $this->getFormInstance($this->getFormName());
         if (!$this->_form) {
             Log::error(sprintf("Form '%s' not found!", $this->getFormName()));
+
             return null;
         }
 
         // assign parent data from form livewire to form
         $this->_form->parentData = app('system_base')->arrayMergeRecursiveDistinct($this->_form->parentData,
-            $this->parentData, false);
+            $this->parentData);
 
         // assign this to form
         $this->_form->setLiveWireId($this->getId());
+
+        // assign default values for object model instance
+        if ($this->objectInstanceDefaultValues) {
+            $this->_form->formLivewire = $this;
+            $this->_form->objectInstanceDefaultValues = app('system_base')->arrayMergeRecursiveDistinct($this->_form->objectInstanceDefaultValues, $this->objectInstanceDefaultValues);
+            $this->_form->liveUpdate = app('system_base')->arrayMergeRecursiveDistinct($this->_form->liveUpdate, $this->liveUpdate);
+            $this->_form->activeTabs = app('system_base')->arrayMergeRecursiveDistinct($this->_form->activeTabs, $this->activeTabs);
+        }
 
         // calculate and render form
         $this->_formResult = $this->_form->renderWithResource($this->formObjectId);
@@ -281,6 +339,7 @@ class NativeObjectBase extends BaseComponent
 
     /**
      * @param  bool  $forceReset
+     *
      * @return void
      */
     protected function reopenFormIfNeeded(bool $forceReset = false): void
@@ -292,7 +351,7 @@ class NativeObjectBase extends BaseComponent
 
     protected function getComponentFormName(): string
     {
-        return 'form.'.\Illuminate\Support\Str::snake($this->getFormName(), '-');
+        return 'form.'.Str::snake($this->getFormName(), '-');
     }
 
     /**
@@ -309,12 +368,13 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * @param        $id
-     * @param  bool  $forceReset
+     * @param  string|int  $id
+     * @param  bool        $forceReset
+     *
      * @return void
      */
     #[On('open-form')]
-    public function openForm($id, bool $forceReset = true): void
+    public function openForm(string|int $id, bool $forceReset = true): void
     {
         if ($forceReset) {
             $this->resetFormResult();
@@ -332,6 +392,46 @@ class NativeObjectBase extends BaseComponent
 
         // assign form actions after form was calculated and generated
         $this->formActionButtons = $this->calcFormActionButtons();
+    }
+
+    /**
+     * @param  string  $tabControl
+     * @param  string  $tabPage
+     *
+     * @return void
+     */
+    #[On('switch-tab')]
+    public function switchTab(string $tabControl, string $tabPage): void
+    {
+        $this->activeTabs[$tabControl] = $tabPage;
+        $this->reopenFormIfNeeded();
+    }
+
+    /**
+     * Emit to close form and refresh datatable if present.
+     *
+     * @return void
+     */
+    protected function closeFormAndRefreshDatatable(): void
+    {
+        // close this form
+        $this->closeForm();
+
+        // refresh data-table
+        $this->refreshDatatable();
+    }
+
+    /**
+     * Emit to close form and refresh datatable if present.
+     *
+     * @return void
+     */
+    protected function refreshDatatable(): void
+    {
+        // refresh data-table
+        if ($this->relatedLivewireDataTable) {
+            $this->dispatch('refresh')->to($this->relatedLivewireDataTable);
+        }
     }
 
     /**
@@ -354,15 +454,79 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
+     * Called by save() or other high level calls.
+     *
+     * @return JsonViewResponse
+     */
+    protected function saveFormData(): JsonViewResponse
+    {
+        // Take the form again to use their validator and update functionalities ...
+        /** @var NativeObjectBaseForm $form */
+        $form = $this->getFormInstance();
+
+        $jsonResponse = new JsonViewResponse();
+        if ($validatedData = $this->validateForm()) {
+
+            // ...
+
+            $jsonResponse->setMessage('Validation ok.');
+        } else {
+            $jsonResponse->setErrorMessage('Unable to load data or validation error.');
+
+            return $jsonResponse;
+        }
+
+        $jsonResponse->setErrorMessage('Need to overwrite saveFormData()');
+
+        return $jsonResponse;
+    }
+
+    /**
+     * Emit
+     *
+     * @param  mixed  $livewireId
+     * @param  mixed  $itemId
+     *
+     * @return void
+     */
+    public function save(mixed $livewireId, mixed $itemId): void
+    {
+        if (!$this->checkLivewireId($livewireId)) {
+            return;
+        }
+
+        $res = $this->saveFormData();
+        if (!$res->hasErrors()) {
+            if ($res->getMessage()) {
+                $this->addSuccessMessage($res->getMessage());
+            } else {
+                $this->addSuccessMessage(__('Data saved successfully.'));
+            }
+
+            // If related datatable exists, we want to close the form.
+            // Otherwise, do not close form if no table present (like user profile)
+            if ($this->relatedLivewireDataTable) {
+                $this->closeFormAndRefreshDatatable();
+            } else {
+                $this->reopenFormIfNeeded(true);
+            }
+        } else {
+            $this->addErrorMessages($res->getErrors());
+
+            // Open this form again (with errors)!
+            $this->reopenFormIfNeeded();
+        }
+    }
+
+    /**
      * @return array
      */
     public function validateForm(): array
     {
         // Take the form again to use their validator and update functionalities ...
-        /** @var \Modules\Form\app\Forms\Base\ModelBase $form */
         $form = $this->getFormInstance();
         // Model have to exists ...
-        if ($modelLoaded = $form->getJsonResource($this->formObjectId)) {
+        if ($form->getJsonResource($this->formObjectId)) {
 
             try {
 
@@ -374,7 +538,7 @@ class NativeObjectBase extends BaseComponent
 
                 return $validatedData;
 
-            } catch (\Exception $exception) {
+            } catch (Exception $exception) {
 
                 Log::error($exception->getMessage());
                 Log::error($exception->getTraceAsString());
@@ -393,7 +557,7 @@ class NativeObjectBase extends BaseComponent
      * @param  mixed  $itemId
      *
      * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
     #[On('delete-item')]
     public function deleteItem(mixed $livewireId, mixed $itemId): bool

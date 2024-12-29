@@ -5,7 +5,6 @@ namespace Modules\Form\app\Forms\Base;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -44,21 +43,6 @@ class ModelBase extends NativeObjectBase
      * @var array
      */
     protected array $objectRelations = [];
-
-    /**
-     * Get the form by model name without namespace and find namespace automatically.
-     * See Modules/Form/Config/config.php for details.
-     *
-     * @param  string  $formName  just the form name without namespace
-     * @return mixed
-     */
-    public static function getFormInstance(string $formName): mixed
-    {
-        if ($modelName = app('system_base')->findModuleClass($formName, 'model-forms')) {
-            return App::make($modelName);
-        }
-        return null;
-    }
 
     /**
      * Can be overwritten, but shouldn't be needed, because it will return the proper model instance.
