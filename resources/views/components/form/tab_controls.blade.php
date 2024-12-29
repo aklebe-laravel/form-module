@@ -1,11 +1,12 @@
 @php
+    use Modules\Form\app\Forms\Base\NativeObjectBase;
+
     /**
-     * @var string $title
-     * @var array $tab_controls
-     * @var string $livewire
-     * @var \Modules\Form\app\Forms\Base\ModelBase $form_instance
+     * @var string    $title
+     * @var array     $tab_controls
+     * @var string    $livewire
+     * @var NativeObjectBase $form_instance
      **/
-//    dump(get_defined_vars());
 @endphp
 @if(!empty($tab_controls))
     @foreach($tab_controls as $tabControlName => $tabControl)
@@ -24,7 +25,6 @@
                     $tabPage['tabPageIndex'] = $tabPageIndex;
                     $tabPage['tabControlName'] = $tabControlName;
                 @endphp
-                {{--                                {!! $form_instance->renderElement('tab_button', $tabPageName, $tabPage, get_defined_vars()) !!}--}}
                 {!! $form_instance->renderElement('tab_button', $tabPageName, $tabPage, $tabControl) !!}
                 @php $tabPageIndex++; @endphp
             @endforeach
@@ -39,7 +39,6 @@
                     $tabPage['tabPageIndex'] = $tabPageIndex;
                     $tabPage['tabControlName'] = $tabControlName;
                 @endphp
-                {{--                                {!! $form_instance->renderElement('tab_content', $tabPageName, $tabPage, get_defined_vars()) !!}--}}
                 {!! $form_instance->renderElement('tab_content', $tabPageName, $tabPage, $tabControl) !!}
                 @php $tabPageIndex++; @endphp
             @endforeach

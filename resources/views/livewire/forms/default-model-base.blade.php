@@ -44,6 +44,8 @@
         @endif
 
         @if($editFormHtml)
+            @include('form::inc.form-backdrop')
+
             <div @if ($this->autoXData) x-data="{form_data:$wire.formObjectAsArray}" @endif
             class="card dt-edit-form {{ ($readonly || !$showFormActions) ? 'readonly' : 'editable' }}"
                  @if($this->canKeyEnterSendForm)
@@ -51,23 +53,23 @@
                     @endif
             >
                 <div class="card-body">
-                    @if ($title)
-                        <div class="card-header">
+                    <div class="card-header">
+                        @if ($title)
                             <span class="decent">{{ $title }}</span>
-                            @else
-                                @if($editFormModelObject && $editFormModelObject->id)
-                                    <span class="decent">{{ __($this->getEloquentModelName()) }}</span>
-                                    @if ($readonly)
-                                        - <span class="decent">{{ __("ID") }}: {{ $editFormModelObject->id }}</span>
-                                    @endif
-                                @else
-                                    <span class="decent">{{ __('New Item') }}</span>
+                        @else
+                            @if($editFormModelObject && $editFormModelObject->id)
+                                <span class="decent">{{ __($this->getEloquentModelName()) }}</span>
+                                @if($readonly)
+                                    - <span class="decent">{{ __("ID") }}: {{ $editFormModelObject->id }}</span>
                                 @endif
-                        </div>
-                    @endif
+                            @else
+                                <span class="decent">{{ __('New Item') }}</span>
+                            @endif
+                        @endif
+                    </div>
                     <div class="card-text">
                         @if ($description)
-                            <div class="alert alert-warning">
+                            <div class="alert alert-light">
                                 {{ $description }}
                             </div>
                         @endif

@@ -1,5 +1,6 @@
 @php
-    /** @var \Modules\SystemBase\app\Http\Livewire\BaseComponent $this */
+    use Modules\SystemBase\app\Http\Livewire\BaseComponent;
+    /** @var BaseComponent $this */
 @endphp
 <div class="mb-2 messages" wire:click="resetMessages">
     @foreach($this->baseMessages as $key => $_messages)

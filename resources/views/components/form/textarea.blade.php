@@ -24,9 +24,7 @@
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
 @endphp
 <div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label class="">{{ $label }}</label>
-    @endunless
+    @include('form::components.form.element-parts.label')
     <textarea
             class="form-control {{ $css_classes }}"
             name="{{ $name }}"
@@ -38,7 +36,5 @@
             @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
             @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
     >@if(!$xModelName){{ $value }}@endif</textarea>
-    @unless(empty($description))
-        <div class="form-text decent">{{ $description }}</div>
-    @endunless
+    @include('form::components.form.element-parts.description')
 </div>

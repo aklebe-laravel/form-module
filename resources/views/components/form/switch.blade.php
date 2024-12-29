@@ -40,12 +40,7 @@
                @if(!$xModelName && $value) checked="checked" @endif
                @if(!$xModelName) value="{{ $value }}" @endif
         >
-        @unless(empty($label))
-            <label class="form-check-label" for="{{ $id }}">{{ $label }}</label>
-        @endunless
+        @include('form::components.form.element-parts.label')
     </div>
-
-    @unless(empty($description))
-        <div class="form-text decent">{{ $description }}</div>
-    @endunless
+    @include('form::components.form.element-parts.description')
 </div>

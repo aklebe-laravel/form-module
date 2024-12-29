@@ -27,9 +27,7 @@
     // $_formattedValue = print_r($validator, true);
 @endphp
 <div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label>{{ $label }}</label>
-    @endunless
+    @include('form::components.form.element-parts.label')
     <div class="form-control-info {{ $css_classes }}"
          class="form-control {{ $css_classes }}"
          @if($xModelName) x-model="{{ $xModelName }}" @endif
@@ -39,8 +37,5 @@
          @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
 
     >{!! $_formattedValue !!}</div>
-    @unless(empty($description))
-        <div class="form-text decent">{{ $description }}</div>
-    @endunless
-
+    @include('form::components.form.element-parts.description')
 </div>

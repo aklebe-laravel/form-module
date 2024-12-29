@@ -1,4 +1,9 @@
 @php
+    use Illuminate\Database\Eloquent\Collection;
+    use Illuminate\Http\Resources\Json\JsonResource;
+    use Modules\Form\app\Forms\Base\NativeObjectBase;
+    use Modules\SystemBase\app\Services\LivewireService;
+
     /**
      * @var bool $visible maybe always true because we are here
      * @var bool $disabled enabled or disabled
@@ -6,7 +11,7 @@
      * @var bool $auto_complete auto fill user inputs
      * @var string $name name attribute
      * @var string $label label of this element
-     * @var Illuminate\Database\Eloquent\Collection $value value attribute
+     * @var Collection $value value attribute
      * @var mixed $default default value
      * @var bool $read_only
      * @var string $description
@@ -17,21 +22,20 @@
      * @var array $html_data data attributes
      * @var array $x_data
      * @var int $element_index
-     * @var Illuminate\Http\Resources\Json\JsonResource $object
-     * @var \Modules\Form\app\Forms\Base\ModelBase $form_instance
+     * @var JsonResource $object
+     * @var NativeObjectBase $form_instance
     */
 
     $parentData = [
        'id' => $object->id ?? null,
-       'model_class' => get_class($object->resource),
+       'model_class' => is_object($object->resource) ? get_class($object->resource) : null,
     ];
-//    dump($parentData);
 
     // Datatable
     $livewireTable = $options['table'] ?? '';
     $livewireTableOptions = $options['table_options'] ?? [];
     $livewireTableOptions['parentData'] = $parentData;
-    $livewireTableKey = \Modules\SystemBase\app\Services\LivewireService::getKey($livewireTable . '-' . $name);
+    $livewireTableKey = LivewireService::getKey($livewireTable . '-' . $name);
 
     // Form
     $livewireForm = $options['form'] ?? '';
@@ -40,9 +44,7 @@
     }
     $livewireFormOptions = $options['form_options'] ?? [];
     $livewireFormOptions['parentData'] = $parentData;
-//    $livewireFormKey = uniqid('manage-default-form-key-recursive-01');
-    $livewireFormKey = \Modules\SystemBase\app\Services\LivewireService::getKey($livewireForm . '-' . $name);
-
+    $livewireFormKey = LivewireService::getKey($livewireForm . '-' . $name);
 @endphp
 <div>
     {{--Form--}}

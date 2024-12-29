@@ -1,30 +1,30 @@
 {
-  "name": "aklebe-laravel/form-module",
-  "type": "laravel-module",
-  "description": "",
-  "authors": [
-    {
-      "name": "Andreas Klebe",
-      "email": "a.klebe.work@gmail.com"
+    "name": "aklebe-laravel/form-module",
+    "type": "laravel-module",
+    "description": "Provides frontend forms for custom objects or eloquent models and their relations.",
+    "authors": [
+        {
+            "name": "Andreas Klebe",
+            "email": "a.klebe.work@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Form\\": "",
+            "Modules\\Form\\database\\factories\\": "database/factories/",
+            "Modules\\Form\\database\\seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Form\\tests\\": "tests/"
+        }
     }
-  ],
-  "extra": {
-    "laravel": {
-      "providers": [],
-      "aliases": {
-      }
-    }
-  },
-  "autoload": {
-    "psr-4": {
-      "Modules\\Form\\": "",
-      "Modules\\Form\\database\\factories\\": "database/factories/",
-      "Modules\\Form\\database\\seeders\\": "database/seeders/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Modules\\Form\\tests\\": "tests/"
-    }
-  }
 }
