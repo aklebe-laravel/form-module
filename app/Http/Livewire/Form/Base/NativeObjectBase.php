@@ -143,7 +143,6 @@ class NativeObjectBase extends BaseComponent
      */
     public function updating($property, $value): void
     {
-        Log::debug(__METHOD__, [$property, $value]);
         $propertyPrepared = Str::chopStart($property, 'formObjectAsArray.');
         if (Arr::has($this->getFormInstance()->liveUpdate, $propertyPrepared)) {
             data_set($this->liveUpdate, $propertyPrepared, $value);
