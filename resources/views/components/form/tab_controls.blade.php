@@ -1,11 +1,13 @@
 @php
     use Modules\Form\app\Forms\Base\NativeObjectBase;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
      * @var string    $title
      * @var array     $tab_controls
      * @var string    $livewire
      * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
      **/
 @endphp
 @if(!empty($tab_controls))

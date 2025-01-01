@@ -15,42 +15,24 @@ use Modules\SystemBase\app\Models\JsonViewResponse;
 
 /**
  * Form base class for all kinds of objects.
+ *
+ * The different to the livewire class (Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase) is
+ * this class handles all html structure, layout, design
+ * while the livewire will handle all data and their sync of backend and frontend
+ *
  */
 class NativeObjectBase
 {
     /**
      * default index of unselected item in select boxes
+     *
      */
     const int UNSELECT_RELATION_IDENT = -1;
 
     /**
-     * Nested assoc array of elements updated by livewire updating()
-     *
-     * @var array
+     * @var NativeObjectBaseLivewire|null
      */
-    public array $liveUpdate = [];
-
     public ?NativeObjectBaseLivewire $formLivewire = null;
-
-    /**
-     * @var array
-     */
-    public array $activeTabs = [];
-
-    /**
-     * The parent livewire ID if present.
-     *
-     * @var string
-     */
-    public string $livewireId = '';
-
-    /**
-     * this data depends on parent livewire
-     * example parent = User and this = Token, so token can access to parentData.id which is the user id
-     *
-     * @var array
-     */
-    public array $parentData = [];
 
     /**
      * Can be overwritten by livewire form components to prepare the element views.
@@ -127,14 +109,7 @@ class NativeObjectBase
     public string $formRootName = '';
 
     /**
-     * Current resource
-     *
-     * @var JsonResource|Model|null
-     */
-    public JsonResource|Model|null $jsonResource = null;
-
-    /**
-     * Set for example 'web_uri' or 'shared_id' to try load from this property if is not numeric in getJsonResource().
+     * Set for example 'web_uri' or 'shared_id' to try load from this property if is not numeric in initDataSource().
      * Model have to be trait by TraitBaseModel to become loadByFrontEnd()
      *
      * @var string
@@ -149,13 +124,22 @@ class NativeObjectBase
     ];
 
     /**
-     * Default values to create new object (or model) instance.
-     *
-     * Used by makeObjectInstanceDefaultValues()
-     *
-     * @var array
+     * @return JsonResource|null
      */
-    public array $objectInstanceDefaultValues = [];
+    public function getDataSource(): ?JsonResource
+    {
+        return $this->formLivewire->getDataSource();
+    }
+
+    /**
+     * @param  JsonResource|null  $dataSource
+     *
+     * @return void
+     */
+    public function setDataSource(?JsonResource $dataSource): void
+    {
+        $this->formLivewire->setDataSource($dataSource);
+    }
 
     /**
      * Overwrite for extra logic.
@@ -164,15 +148,13 @@ class NativeObjectBase
      *
      * @return JsonResource
      */
-    public function getJsonResource(mixed $id = null): JsonResource
+    public function initDataSource(mixed $id = null): JsonResource
     {
-        $this->jsonResource = $this->jsonResource ?: new JsonResource([]);
-
-        return $this->jsonResource;
+        return $this->formLivewire->initDataSource($id);
     }
 
     /**
-     * Default values to create new object model instance.
+     * Default values used set up missing prepared values and to create new object instance.
      * Overwrite this by calling parent::makeObjectInstanceDefaultValues()
      * or overwrite $this->objectInstanceDefaultValues.
      *
@@ -180,7 +162,7 @@ class NativeObjectBase
      */
     public function makeObjectInstanceDefaultValues(): array
     {
-        return $this->objectInstanceDefaultValues;
+        return $this->formLivewire->makeObjectInstanceDefaultValues();
     }
 
     /**
@@ -359,7 +341,7 @@ class NativeObjectBase
     {
         $validateData = [];
         if ($formElementsRoot === null) {
-            $this->getJsonResource(); // force reload if possible or get a blank one
+            $this->initDataSource(); // force reload if possible or get a blank one
             $formElementsRoot = $this->getFormElements();
         }
         foreach (data_get($formElementsRoot, 'tab_controls', []) as $tabControlData) {
@@ -395,9 +377,9 @@ class NativeObjectBase
     {
         return [
             'css_classes' => 'form-edit',
-            'livewire'    => 'formObjectAsArray',
-            'object'      => $this->jsonResource,
-            'title'       => $this->makeFormTitle($this->jsonResource, 'id'),
+            'livewire'    => 'dataTransfer',
+            'object'      => $this->getDataSource(), // @todo: remove
+            'title'       => $this->makeFormTitle($this->getDataSource(), 'id'),
         ];
     }
 
@@ -408,7 +390,7 @@ class NativeObjectBase
      */
     public function renderWithResource(mixed $id = null): JsonResource
     {
-        $resource = $this->getJsonResource($id);
+        $resource = $this->initDataSource($id);
         $formObject = $this->getFormElements();
         $html = $this->renderElement('full_form', '', $formObject);
 
@@ -525,16 +507,16 @@ class NativeObjectBase
     }
 
     /**
-     * @param  JsonResource|null  $jsonResource
+     * @param  JsonResource|null  $dataSource
      * @param  string             $displayKey
      *
      * @return string
      */
-    protected function makeFormTitle(?JsonResource $jsonResource, string $displayKey): string
+    protected function makeFormTitle(?JsonResource $dataSource, string $displayKey): string
     {
-        if ($jsonResource) {
+        if ($dataSource) {
             $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel),
-                data_get($jsonResource, $displayKey, 0));
+                data_get($dataSource, $displayKey, 0));
         } else {
             $result = sprintf(__("Create %s"), __($this->objectFrontendLabel));
         }
@@ -552,7 +534,7 @@ class NativeObjectBase
      */
     protected function checkViewDataCastAttributeValue(string $name, mixed $value): mixed
     {
-        if ($this->jsonResource->hasCast($name, ['array', 'object'])) {
+        if ($this->getDataSource()->hasCast($name, ['array', 'object'])) {
 
             // JSON_UNESCAPED_SLASHES to fix "\/" in textarea
             $jsonEncodeFlags = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES;
@@ -614,7 +596,7 @@ class NativeObjectBase
         $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
 
         //
-        $resourcePrevValue = data_get($this->jsonResource, $name);
+        $resourcePrevValue = data_get($this->getDataSource(), $name);
 
         /**
          * get value by (first given wins)
@@ -676,7 +658,8 @@ class NativeObjectBase
         }
 
         $viewData['form_instance'] = $this;
-        $viewData['object'] = $this->jsonResource;
+        $viewData['form_livewire'] = $this->formLivewire;
+        $viewData['object'] = $this->getDataSource();
 
         // @deprecated 'html_element_module': use "MyModule::some_element" like above
         // if "html_element_module" given, use this ...
@@ -763,28 +746,18 @@ class NativeObjectBase
     public function getOwnerUserId(): mixed
     {
         // 1) Autodetect: Check whether there is an existing user_id ...
-        if ($this->jsonResource && data_get($this->jsonResource, 'user_id')) {
-            return data_get($this->jsonResource, 'user_id');
+        if ($this->getDataSource() && data_get($this->getDataSource(), 'user_id')) {
+            return data_get($this->getDataSource(), 'user_id');
         }
 
         // 2) Check parent id (should be user object)
-        if ($id = data_get($this->parentData, 'id')) {
+        if ($id = data_get($this->formLivewire->parentData, 'id')) {
             // @todo: should be check whether parent is User?
             return $id;
         }
 
         // 3) Try to get user_id by assigned default values
-        return data_get($this->objectInstanceDefaultValues, 'user_id', 0);
-    }
-
-    /**
-     * @param  string  $id
-     *
-     * @return void
-     */
-    public function setLiveWireId(string $id): void
-    {
-        $this->livewireId = $id;
+        return data_get($this->formLivewire->objectInstanceDefaultValues, 'user_id', 0);
     }
 
     /**

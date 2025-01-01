@@ -76,11 +76,20 @@ class NativeObjectBase extends BaseComponent
     public mixed $formObjectId = null;
 
     /**
-     * The data container from the db model
+     * Current data object for all relevant data in background.
+     *
+     * @var JsonResource|null
+     */
+    protected JsonResource|null $dataSource = null;
+
+    /**
+     * The data as array (for example from the db model) resulted from $this->dataSource
+     * which is synced with frontend and input elements.
+     * Names if input will prefix with 'dataTransfer.xxx'
      *
      * @var array
      */
-    public array $formObjectAsArray = [];
+    public array $dataTransfer = [];
 
     /**
      * If given, it's the related datatable where this form is used to edit their items.
@@ -98,9 +107,12 @@ class NativeObjectBase extends BaseComponent
     public array $objectInstanceDefaultValues = [];
 
     /**
+     * Nested assoc array of elements updated by livewire updating()
+     *
      * @var array
      */
     public array $liveUpdate = [];
+
 
     /**
      * @var array
@@ -128,12 +140,44 @@ class NativeObjectBase extends BaseComponent
 
     /**
      * if true adding
-     * x-data="{form_data:$wire.formObjectAsArray}"
+     * x-data="{form_data:$wire.dataTransfer}"
      * to form
      *
      * @var bool
      */
     public bool $autoXData = false;
+
+    /**
+     * @return JsonResource|null
+     */
+    public function getDataSource(): ?JsonResource
+    {
+        return $this->dataSource;
+    }
+
+    /**
+     * @param  JsonResource|null  $dataSource
+     *
+     * @return void
+     */
+    public function setDataSource(?JsonResource $dataSource): void
+    {
+        $this->dataSource = $dataSource;
+    }
+
+    /**
+     * Overwrite for extra logic.
+     *
+     * @param  mixed|null  $id
+     *
+     * @return JsonResource
+     */
+    public function initDataSource(mixed $id = null): JsonResource
+    {
+        $this->dataSource = $this->dataSource ?: new JsonResource([]);
+
+        return $this->dataSource;
+    }
 
     /**
      * @param $property
@@ -143,11 +187,24 @@ class NativeObjectBase extends BaseComponent
      */
     public function updating($property, $value): void
     {
-        $propertyPrepared = Str::chopStart($property, 'formObjectAsArray.');
-        if (Arr::has($this->getFormInstance()->liveUpdate, $propertyPrepared)) {
+        Log::debug(__METHOD__, [$property, $value]);
+        $propertyPrepared = Str::chopStart($property, 'dataTransfer.');
+        if (Arr::has($this->liveUpdate, $propertyPrepared)) {
             data_set($this->liveUpdate, $propertyPrepared, $value);
             $this->reopenFormIfNeeded(true); // true is important to update all values!
         }
+    }
+
+    /**
+     * Default values used set up missing prepared values and to create new object instance.
+     * Overwrite this by calling parent::makeObjectInstanceDefaultValues()
+     * or overwrite $this->objectInstanceDefaultValues.
+     *
+     * @return array
+     */
+    public function makeObjectInstanceDefaultValues(): array
+    {
+        return $this->objectInstanceDefaultValues;
     }
 
     /**
@@ -158,7 +215,7 @@ class NativeObjectBase extends BaseComponent
     protected function getDefaultWireFormAccept(): string
     {
         // maybe this version is also correct?
-        return $this->getWireCallString('save', [data_get($this->formObjectAsArray, 'id', '')]);
+        return $this->getWireCallString('save', [data_get($this->dataTransfer, 'id', '')]);
 
         //        $editForm = $this->getFormResult();
         //        $editFormObject = data_get($editForm, 'additional.form_object');
@@ -241,7 +298,17 @@ class NativeObjectBase extends BaseComponent
     {
         if ($modelName = app('system_base')->findModuleClass($formName ?: $this->getFormName(), 'model-forms')) {
             try {
-                return App::make($modelName);
+                /** @var NativeObjectBaseForm $form */
+                $form = App::make($modelName);
+
+                // assign this as livewire form
+                $form->formLivewire = $this;
+
+                // set up defaults
+                $this->objectInstanceDefaultValues = $form->makeObjectInstanceDefaultValues();
+
+                // return form
+                return $form;
             } catch (Exception $e) {
                 Log::error($e->getMessage());
             }
@@ -274,7 +341,7 @@ class NativeObjectBase extends BaseComponent
 
     /**
      * Calculating and generating the form object,
-     * prepare formObjectAsArray
+     * prepare dataTransfer
      * and adjust actionable and readonly flags depends on form config
      *
      * @return JsonResource|null
@@ -293,21 +360,6 @@ class NativeObjectBase extends BaseComponent
             return null;
         }
 
-        // assign parent data from form livewire to form
-        $this->_form->parentData = app('system_base')->arrayMergeRecursiveDistinct($this->_form->parentData,
-            $this->parentData);
-
-        // assign this to form
-        $this->_form->setLiveWireId($this->getId());
-
-        // assign default values for object model instance
-        if ($this->objectInstanceDefaultValues) {
-            $this->_form->formLivewire = $this;
-            $this->_form->objectInstanceDefaultValues = app('system_base')->arrayMergeRecursiveDistinct($this->_form->objectInstanceDefaultValues, $this->objectInstanceDefaultValues);
-            $this->_form->liveUpdate = app('system_base')->arrayMergeRecursiveDistinct($this->_form->liveUpdate, $this->liveUpdate);
-            $this->_form->activeTabs = app('system_base')->arrayMergeRecursiveDistinct($this->_form->activeTabs, $this->activeTabs);
-        }
-
         // calculate and render form
         $this->_formResult = $this->_form->renderWithResource($this->formObjectId);
 
@@ -315,13 +367,13 @@ class NativeObjectBase extends BaseComponent
         $this->readonly = !$this->_form->canEdit();
         $this->actionable = $this->_form->canEdit();
 
-        // @todo: object deprecated change to form_object.jsonResource?
-        // Important to check if $this->formObjectAsArray was already filled!
-        if (!$this->formObjectAsArray) {
+        // @todo: object deprecated change to form_object.dataSource?
+        // Important to check if $this->dataTransfer was already filled!
+        if (!$this->dataTransfer) {
             if ($object = data_get($this->_formResult, 'additional.form_object.object')) {
-                $this->formObjectAsArray = app('system_base')->toArray($object);
+                $this->dataTransfer = app('system_base')->toArray($object);
             } else {
-                $this->formObjectAsArray = [];
+                $this->dataTransfer = [];
             }
         }
 
@@ -367,17 +419,17 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * @param  string|int  $id
-     * @param  bool        $forceReset
+     * @param  mixed  $id  can also be an array (i.e.: ratings)
+     * @param  bool   $forceReset
      *
      * @return void
      */
     #[On('open-form')]
-    public function openForm(string|int $id, bool $forceReset = true): void
+    public function openForm(mixed $id, bool $forceReset = true): void
     {
         if ($forceReset) {
             $this->resetFormResult();
-            $this->formObjectAsArray = [];
+            $this->dataTransfer = [];
         }
 
         $this->isFormOpen = true;
@@ -525,12 +577,12 @@ class NativeObjectBase extends BaseComponent
         // Take the form again to use their validator and update functionalities ...
         $form = $this->getFormInstance();
         // Model have to exists ...
-        if ($form->getJsonResource($this->formObjectId)) {
+        if ($form->initDataSource($this->formObjectId)) {
 
             try {
 
                 $jsonResponse = new JsonViewResponse();
-                $validatedData = $form->validate($this->formObjectAsArray, $jsonResponse);
+                $validatedData = $form->validate($this->dataTransfer, $jsonResponse);
                 if (!$validatedData || $jsonResponse->hasErrors()) {
                     $this->addErrorMessages($jsonResponse->getErrors());
                 }

@@ -38,9 +38,9 @@ class ${{class_name}} extends ModelBase
 
         return [
             ... $parentFormData,
-            'title'        => $this->makeFormTitle($this->jsonResource, '${{class_name}} - Form'),
+            'title'        => $this->makeFormTitle($this->getDataSource(), '${{class_name}} - Form'),
             'css_classes'  => 'form-edit',
-            'livewire'     => 'formObjectAsArray',
+            'livewire'     => 'dataTransfer',
             'tab_controls' => [
                 'base_item' => [
                     'tab_pages' => [

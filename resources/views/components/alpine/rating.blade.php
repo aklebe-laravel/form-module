@@ -32,7 +32,7 @@
     </span>
 
     {{--draw the value as number--}}
-    <template x-if="typeof ratingContainer.show_value === 'undefined' || ratingContainer.show_value">
+    <template x-if="((typeof ratingContainer.show_value === 'undefined') || ratingContainer.show_value) && (typeof {{ $ratingAlpineName }} !== 'undefined')">
         <span class="decent">
             (<span x-text="{{ $ratingAlpineName }}.toFixed(2)"></span>)
         </span>

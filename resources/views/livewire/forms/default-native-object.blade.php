@@ -26,7 +26,7 @@
 
             <div class="card dt-edit-form {{ ($readonly) ? 'readonly' : 'editable' }}"
                  @if ($this->autoXData)
-                     x-data="{form_data:$wire.formObjectAsArray}"
+                     x-data="{form_data:$wire.dataTransfer}"
                  @endif
                  @if($this->canKeyEnterSendForm)
                      wire:keydown.enter="{{ $this->getDefaultWireFormAccept() }}"
