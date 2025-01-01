@@ -1,5 +1,6 @@
 @php
     use Modules\Form\app\Forms\Base\NativeObjectBase;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
      * @var string $title
@@ -9,6 +10,7 @@
      * @var integer $element_index
      * @var integer $tabPageIndex location tab_controls.blade.php
      * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
      * @var array $content
      **/
 

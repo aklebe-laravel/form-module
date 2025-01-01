@@ -2,6 +2,7 @@
     use Illuminate\Database\Eloquent\Collection;
     use Modules\DataTable\app\Http\Livewire\DataTable\Base\BaseDataTable;
     use Modules\Form\app\Forms\Base\NativeObjectBase;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
     * @var bool $disabled
@@ -17,6 +18,7 @@
     * @var array $x_data
     * @var string $modelName
     * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
     */
 
     $options['table_options']['selectable'] = false;

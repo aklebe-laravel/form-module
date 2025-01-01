@@ -3,6 +3,7 @@
     use Modules\DataTable\app\Http\Livewire\DataTable\Base\BaseDataTable;
     use Modules\Form\app\Forms\Base\NativeObjectBase;
     use Modules\SystemBase\app\Services\LivewireService;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
     * @var string $name name attribute
@@ -17,6 +18,7 @@
     * @var array $x_data
     * @var string $modelName
     * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
     */
 
     $parentData = [

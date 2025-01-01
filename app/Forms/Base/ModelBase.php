@@ -45,6 +45,16 @@ class ModelBase extends NativeObjectBase
     protected array $objectRelations = [];
 
     /**
+     * Just overwritten to add the type hint Model
+     *
+     * @return JsonResource|Model|null
+     */
+    public function getDataSource(): ?JsonResource
+    {
+        return parent::getDataSource();
+    }
+
+    /**
      * Can be overwritten, but shouldn't be needed, because it will return the proper model instance.
      * If id is invalid, an empty object will be returned.
      *
@@ -52,7 +62,7 @@ class ModelBase extends NativeObjectBase
      *
      * @return JsonResource
      */
-    public function getJsonResource(mixed $id = null): JsonResource
+    public function initDataSource(mixed $id = null): JsonResource
     {
         if ($id) {
 
@@ -66,15 +76,15 @@ class ModelBase extends NativeObjectBase
             if ($x = $builder->first()) {
                 // parent id (the id from parent form if form in form)
                 // @todo: find a better place?
-                $x->relatedPivotModelId = data_get($this->parentData, 'id'); // parent id or null
+                $x->relatedPivotModelId = data_get($this->formLivewire->parentData, 'id'); // parent id or null
             }
-            $this->jsonResource = new JsonResource($x ?? $this->getObjectEloquentModel());
+            $this->setDataSource(new JsonResource($x ?? $this->getObjectEloquentModel()));
 
         } else {
-            $this->jsonResource = $this->jsonResource ?: new JsonResource($this->makeObjectModelInstance());
+            $this->setDataSource($this->getDataSource() ?: new JsonResource($this->makeObjectModelInstance()));
         }
 
-        return $this->jsonResource;
+        return $this->getDataSource();
     }
 
     /**
@@ -124,11 +134,11 @@ class ModelBase extends NativeObjectBase
     public function getFormElements(): array
     {
         return [
-            'object'      => $this->jsonResource,
+            'object'      => $this->getDataSource(),
             'css_classes' => 'form-edit',
-            'livewire'    => 'formObjectAsArray',
-            'title'       => $this->makeFormTitle($this->jsonResource, 'id'),
-            'description' => !$this->jsonResource->getKey() ? 'module_form_ensure_create_instance' : '',
+            'livewire'    => 'dataTransfer',
+            'title'       => $this->makeFormTitle($this->getDataSource(), 'id'),
+            'description' => !$this->getDataSource()->getKey() ? 'module_form_ensure_create_instance' : '',
         ];
     }
 
@@ -159,7 +169,7 @@ class ModelBase extends NativeObjectBase
         $ttlDefault = config('system-base.cache.default_ttl', 1);
         $ttl = config('system-base.cache.object.signature.ttl', $ttlDefault);
         return Cache::remember('form_prototype_'.$this->getObjectEloquentModelName(), $ttl, function () {
-            return $this->getJsonResource(); // empty resource to know key
+            return $this->initDataSource(); // empty resource to know key
         });
     }
 
@@ -216,7 +226,7 @@ class ModelBase extends NativeObjectBase
             $collection = $this->getObjectEloquentModel()->with($this->objectRelations);
             if ($objectInstance = $collection->find($id)) {
 
-                $objectInstance->relatedPivotModelId = data_get($this->parentData, 'id'); // parent id or null
+                $objectInstance->relatedPivotModelId = data_get($this->formLivewire->parentData, 'id'); // parent id or null
 
                 $this->onBeforeUpdateItem($itemData, $jsonResponse, $objectInstance);
 
@@ -264,7 +274,7 @@ class ModelBase extends NativeObjectBase
 
             // object data have to present in 'data'
             $itemData = data_get($item, 'data');
-            $this->parentData = data_get($item, 'parentData');
+            $this->formLivewire->parentData = data_get($item, 'parentData');
 
             // Validate now
             $itemData = $this->validate($itemData, $jsonResponse);
@@ -520,7 +530,7 @@ class ModelBase extends NativeObjectBase
 
         // remove mutators
         foreach ($result as $k => $v) {
-            if ($this->jsonResource->hasAttributeMutator($k)) {
+            if ($this->getDataSource()->hasAttributeMutator($k)) {
                 unset($result[$k]);
             }
         }
@@ -529,14 +539,15 @@ class ModelBase extends NativeObjectBase
     }
 
     /**
-     * @param  JsonResource|null  $jsonResource
-     * @param  string  $displayKey
+     * @param  JsonResource|null  $dataSource
+     * @param  string             $displayKey
+     *
      * @return string
      */
-    protected function makeFormTitle(?JsonResource $jsonResource, string $displayKey): string
+    protected function makeFormTitle(?JsonResource $dataSource, string $displayKey): string
     {
-        if ($jsonResource->getKey()) {
-            $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel), $jsonResource->$displayKey);
+        if ($dataSource->getKey()) {
+            $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel), $dataSource->$displayKey);
         } else {
             $result = sprintf(__("Create %s"), __($this->objectFrontendLabel));
         }
@@ -551,12 +562,7 @@ class ModelBase extends NativeObjectBase
      */
     public function makeObjectModelInstance(array $data = []): Model
     {
-        $d = $this->makeObjectInstanceDefaultValues();
-        $d = app('system_base')->arrayMergeRecursiveDistinct($d, $data);
-
-        /** @var Model $objectInstance */
-        $objectInstance = $this->getObjectEloquentModel()->make($d);
-        return $objectInstance;
+        return $this->getObjectEloquentModel()->make(array_merge($this->formLivewire->objectInstanceDefaultValues, $data));
     }
 
     /**
@@ -629,20 +635,20 @@ class ModelBase extends NativeObjectBase
         $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
 
         // Don't include fields not in table columns ro not in resource itself!
-        // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in jsonResource)
+        // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
         $allColumns = $this->getModelTableColumns();
         if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name,
-                $allColumns)) && (!app('system_base')->hasData($this->jsonResource->resource, $name))) {
+                $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
             return $viewData;
         }
 
         //
-        $resourcePrevValue = data_get($this->jsonResource->resource, $name);
+        $resourcePrevValue = data_get($this->getDataSource()->resource, $name);
 
         /**
          * get value by (first given wins)
          * 1) direct set by form field viewData['value']
-         * 2) from jsonResource
+         * 2) from dataSource
          * 3) viewData['default'] if given and value is empty
          * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
          * @fixed: overwritten null wich was needed
@@ -657,7 +663,7 @@ class ModelBase extends NativeObjectBase
             // Check whether value is a $cast attribute and we have to transform it before view (like json)
             $value = $this->checkViewDataCastAttributeValue($name, $value);
             // object for livewire ...
-            data_set($this->jsonResource->resource, $name, $value);
+            data_set($this->getDataSource()->resource, $name, $value);
         }
 
         // set calculated values for blade templates
@@ -682,11 +688,11 @@ class ModelBase extends NativeObjectBase
         // We should load the original model first to get all elements
         // having conditions like can_edit depends on the loaded resource!
         // So check resource exists and key is present, otherwise load it.
-        if ($maybeEmptyResource = $this->getJsonResource()) {
+        if ($maybeEmptyResource = $this->initDataSource()) {
             if (!$maybeEmptyResource->resource->getKey()) {
                 $keyName = $maybeEmptyResource->resource->getKeyName();
                 if ($keyValue = data_get($data, $keyName)) {
-                    $this->getJsonResource($keyValue);
+                    $this->initDataSource($keyValue);
                 }
             }
         }

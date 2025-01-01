@@ -1,6 +1,7 @@
 @php
     use Illuminate\Http\Resources\Json\JsonResource;
     use Modules\Form\app\Forms\Base\NativeObjectBase;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
      * default input text element
@@ -26,6 +27,7 @@
      * @var int $element_index
      * @var JsonResource $object
      * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
      */
 
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');

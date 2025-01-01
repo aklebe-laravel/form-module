@@ -92,8 +92,8 @@ class ModelBase extends NativeObjectBase
             return false;
         }
 
-        if ($this->_form->jsonResource) {
-            if ($this->_form->jsonResource->delete()) {
+        if ($this->dataSource) {
+            if ($this->dataSource->delete()) {
                 $this->addSuccessMessage("Item deleted.");
             }
         }
@@ -112,7 +112,7 @@ class ModelBase extends NativeObjectBase
         /** @var ModelBaseAlias $form */
         $form = $this->getFormInstance();
         // Model have to exists ...
-        if ($modelLoaded = $form->getJsonResource($this->formObjectId)) {
+        if ($modelLoaded = $form->initDataSource($this->formObjectId)) {
 
             foreach ($this->relationUpdates as $propertyInCamelCase => $relationIdUpdates) {
 
@@ -121,16 +121,16 @@ class ModelBase extends NativeObjectBase
                     ->toArray();
 
                 if ((count($relationIdUpdates) > 0) || (count($relationIdUpdates) != count($originalRelationIds))) {
-                    $this->formObjectAsArray[$propertyInCamelCase] = $relationIdUpdates;
+                    $this->dataTransfer[$propertyInCamelCase] = $relationIdUpdates;
                 } else {
-                    $this->formObjectAsArray[$propertyInCamelCase] = $originalRelationIds;
+                    $this->dataTransfer[$propertyInCamelCase] = $originalRelationIds;
                 }
             }
 
             try {
 
                 $jsonResponse = new JsonViewResponse();
-                $validatedData = $form->validate($this->formObjectAsArray, $jsonResponse);
+                $validatedData = $form->validate($this->dataTransfer, $jsonResponse);
                 if (!$validatedData || $jsonResponse->hasErrors()) {
                     $this->addErrorMessages($jsonResponse->getErrors());
                 }
@@ -168,7 +168,7 @@ class ModelBase extends NativeObjectBase
 
                 $updateList = [
                     [
-                        'data'       => $this->formObjectAsArray,
+                        'data'       => $this->dataTransfer,
                         'parentData' => $this->parentData
                     ],
 

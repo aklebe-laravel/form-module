@@ -46,7 +46,7 @@
         @if($editFormHtml)
             @include('form::inc.form-backdrop')
 
-            <div @if ($this->autoXData) x-data="{form_data:$wire.formObjectAsArray}" @endif
+            <div @if ($this->autoXData) x-data="{form_data:$wire.dataTransfer}" @endif
             class="card dt-edit-form {{ ($readonly || !$showFormActions) ? 'readonly' : 'editable' }}"
                  @if($this->canKeyEnterSendForm)
                      wire:keydown.enter="{{ $this->getDefaultWireFormAccept() }}"

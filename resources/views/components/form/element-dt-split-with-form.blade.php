@@ -3,6 +3,7 @@
     use Illuminate\Http\Resources\Json\JsonResource;
     use Modules\Form\app\Forms\Base\NativeObjectBase;
     use Modules\SystemBase\app\Services\LivewireService;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
      * @var bool $visible maybe always true because we are here
@@ -24,6 +25,7 @@
      * @var int $element_index
      * @var JsonResource $object
      * @var NativeObjectBase $form_instance
+     * @var NativeObjectBaseLivewire $form_livewire
     */
 
     $parentData = [
