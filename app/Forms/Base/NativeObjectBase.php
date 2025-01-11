@@ -2,7 +2,6 @@
 
 namespace Modules\Form\app\Forms\Base;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +9,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Modules\Acl\app\Models\AclResource;
 use Modules\Acl\app\Services\UserService;
+use Modules\Form\app\Events\BeforeRenderForm;
+use Modules\Form\app\Events\FinalFormElements;
 use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 use Modules\SystemBase\app\Models\JsonViewResponse;
 
@@ -124,6 +125,11 @@ class NativeObjectBase
     ];
 
     /**
+     * @var array
+     */
+    private array $finalFormElements = [];
+
+    /**
      * @return JsonResource|null
      */
     public function getDataSource(): ?JsonResource
@@ -210,10 +216,13 @@ class NativeObjectBase
         }
 
         // Get the validate FORMAT for each element ...
-        $validateFormat = $this->runFormElements(function ($formElement, $key) use ($validatorPrefix, &$data, $jsonResponse) {
+        $validateFormat = $this->runValidateFormElements(function ($formElement, $key) use ($validatorPrefix, &$data, $jsonResponse) {
             $validateData = [];
 
             // @todo: check for uniques like email ...
+
+            // correct key if needed
+            $key = $this->getElementName($formElement, $key);
 
             // Check for select relations with value self::UNSELECT_RELATION_IDENT
             // @todo: not only 'select' are select fields! Also check all other select elements!
@@ -333,43 +342,69 @@ class NativeObjectBase
      * Loop all nested form elements.
      *
      * @param  callable    $callBackElement
-     * @param  array|null  $formElementsRoot  null lassen, um den Root von $this->getFormElements() zu benutzen
+     * @param  array|null  $formElementsRoot  null for root
      *
      * @return array
      */
-    public function runFormElements(callable $callBackElement, ?array $formElementsRoot = null): array
+    public function runValidateFormElements(callable $callBackElement, ?array $formElementsRoot = null): array
     {
         $validateData = [];
         if ($formElementsRoot === null) {
             $this->initDataSource(); // force reload if possible or get a blank one
-            $formElementsRoot = $this->getFormElements();
+            $formElementsRoot = $this->getFinalFormElements();
         }
+
         foreach (data_get($formElementsRoot, 'tab_controls', []) as $tabControlData) {
             foreach (data_get($tabControlData, 'tab_pages', []) as $tabPage) {
                 if ($formData = data_get($tabPage, 'content')) {
-                    $subValidateData = $this->runFormElements($callBackElement, $formData);
+                    $subValidateData = $this->runValidateFormElements($callBackElement, $formData);
                     $validateData = app('system_base')->arrayMergeRecursiveDistinct($validateData, $subValidateData);
                 }
             }
         }
+
         foreach (data_get($formElementsRoot, 'form_elements', []) as $key => $formElement) {
-
-            if ($newKey = data_get($formElement, 'property')) {
-                $key = $newKey;
-            }
-
             $subValidateData = $callBackElement($formElement, $key);
             $validateData = app('system_base')->arrayMergeRecursiveDistinct($validateData, $subValidateData);
-
         }
 
         return $validateData;
     }
 
     /**
+     * Loop all nested form elements.
+     *
+     * @param  callable     $callBackElement   callback params ($currentTabControl, $currentTabPage, $key, $currentFullPath)
+     * @param  array|null   $formElementsRoot  null for root
+     * @param  string|null  $currentTabControl
+     * @param  string|null  $currentTabPage
+     * @param  string       $currentFullPath
+     *
+     * @return void
+     */
+    public function runAllFormElements(callable $callBackElement, ?array $formElementsRoot = null, ?string $currentTabControl = null, ?string $currentTabPage = null, string $currentFullPath = ''): void
+    {
+        if ($formElementsRoot === null) {
+            $formElementsRoot = $this->getFinalFormElements();
+        }
+
+        foreach (data_get($formElementsRoot, 'tab_controls', []) as $tabControlKey => $tabControlData) {
+            foreach (data_get($tabControlData, 'tab_pages', []) as $tabPageKey => $tabPage) {
+                if ($formData = data_get($tabPage, 'content')) {
+                    $p = $currentFullPath.(($currentFullPath) ? '.' : '').'tab_controls.'.$tabControlKey.'.tab_pages.'.$tabPageKey.'.content';
+                    $this->runAllFormElements($callBackElement, $formData, $tabControlKey, $tabPageKey, $p);
+                }
+            }
+        }
+
+        foreach (data_get($formElementsRoot, 'form_elements', []) as $key => $formElement) {
+            $callBackElement($currentTabControl, $currentTabPage, $key, $currentFullPath.(($currentFullPath) ? '.' : '').'form_elements.'.$key);
+        }
+    }
+
+    /**
      * Overwrite this method to define your form.
      * Call this method as parent::getFormElements()
-     *
      *
      * @return array
      */
@@ -384,6 +419,23 @@ class NativeObjectBase
     }
 
     /**
+     * get defined form elements and cache them as finalFormElements
+     *
+     * @return array
+     */
+    public function getFinalFormElements(): array
+    {
+        if (!$this->finalFormElements) {
+            $this->finalFormElements = $this->getFormElements();
+
+            // fire event for modules
+            FinalFormElements::dispatch($this);
+        }
+
+        return $this->finalFormElements;
+    }
+
+    /**
      * @param $id
      *
      * @return JsonResource
@@ -391,12 +443,18 @@ class NativeObjectBase
     public function renderWithResource(mixed $id = null): JsonResource
     {
         $resource = $this->initDataSource($id);
-        $formObject = $this->getFormElements();
-        $html = $this->renderElement('full_form', '', $formObject);
+
+        //
+        $this->getFinalFormElements();
+
+        // fire event for modules
+        BeforeRenderForm::dispatch($this);
+
+        $html = $this->renderElement('full_form', '', $this->finalFormElements);
 
         $resource->additional = [
             'form_html'   => $html,
-            'form_object' => $formObject,
+            'form_object' => $this->finalFormElements,
         ];
 
         return $resource;
@@ -592,7 +650,8 @@ class NativeObjectBase
          * 3) take parameter $name
          * 4) add parent name to path if given
          */
-        $name = data_get($viewData, 'name') ?: data_get($viewData, 'property') ?: $name;
+        //$name = data_get($viewData, 'name') ?: data_get($viewData, 'property') ?: $name;
+        $name = $this->getElementName($viewData, $name);
         $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
 
         //
@@ -601,8 +660,8 @@ class NativeObjectBase
         /**
          * get value by (first given wins)
          * 1) direct set by form field viewData['value']
-         * 2) from jsonResource (if not null)
-         * 3) form field viewData['default']
+         * 2) from dataSource (if not null)
+         * 3) from field viewData['default']
          *
          * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
          */
@@ -616,6 +675,23 @@ class NativeObjectBase
         $this->calculateCallableValues($viewData);
 
         return $viewData;
+    }
+
+    /**
+     * get name by (first given wins)
+     * 1) field from viewData['name']
+     * 2) field from viewData['property']
+     * 3) take parameter $name
+     * 4) add parent name to path if given
+     *
+     * @param  array   $elementConfigData
+     * @param  string  $default
+     *
+     * @return string
+     */
+    protected function getElementName(array $elementConfigData, string $default): string
+    {
+        return data_get($elementConfigData, 'name') ?: data_get($elementConfigData, 'property') ?: $default;
     }
 
     /**

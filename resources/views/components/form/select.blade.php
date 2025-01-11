@@ -24,6 +24,7 @@
      * @var array $options
      */
 
+    $multiple ??= false;
     $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
     $_liveWireAttr = '';
     if ($livewire) {
@@ -39,6 +40,7 @@
             @if($_liveWireAttr) {!! $_liveWireAttr !!} @endif
             @if ($wireIgnore ?? false) wire:ignore.self @endif
             @if($disabled) disabled="disabled" @endif
+            @if($multiple) multiple="multiple" size="{{ !empty($list_size) ? $list_size : 6 }}" @endif
             @if($read_only) readonly @endif
             @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
     >
@@ -57,10 +59,13 @@
                             @if(($k != $value) && ($disabled || $read_only)) disabled="disabled" @endif
                     >{{ $v }}</option>
                 @else
+                    @php
+                        $_valueHit = (is_array($value) || is_object($value)) ? (in_array($k, (array)$value)) : ($k == $value);
+                    @endphp
                     <option
-                            @if((!$xModelName) && ($k == $value)) selected="selected" @endif
+                            @if((!$xModelName) && ($_valueHit)) selected="selected" @endif
                     value="{{ $k }}"
-                            @if(($k != $value) && ($disabled || $read_only)) disabled="disabled" @endif
+                            @if((!$_valueHit) && ($disabled || $read_only)) disabled="disabled" @endif
                     >{{ $v }}</option>
                 @endif
             @endforeach

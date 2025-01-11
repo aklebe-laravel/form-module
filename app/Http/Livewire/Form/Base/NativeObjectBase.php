@@ -187,7 +187,6 @@ class NativeObjectBase extends BaseComponent
      */
     public function updating($property, $value): void
     {
-        Log::debug(__METHOD__, [$property, $value]);
         $propertyPrepared = Str::chopStart($property, 'dataTransfer.');
         if (Arr::has($this->liveUpdate, $propertyPrepared)) {
             data_set($this->liveUpdate, $propertyPrepared, $value);
