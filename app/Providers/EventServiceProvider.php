@@ -4,6 +4,8 @@ namespace Modules\Form\app\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Modules\DeployEnv\app\Events\DeployEnvFormer;
+use Modules\Form\app\Events\BeforeRenderForm;
+use Modules\Form\app\Events\FinalFormElements;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -13,8 +15,14 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
-        DeployEnvFormer::class              => [
+        DeployEnvFormer::class  => [
             \Modules\Form\app\Listeners\DeployEnvFormer::class,
+        ],
+        BeforeRenderForm::class => [
+            \Modules\Form\app\Listeners\BeforeRenderForm::class,
+        ],
+        FinalFormElements::class => [
+            \Modules\Form\app\Listeners\FinalFormElements::class,
         ],
     ];
 

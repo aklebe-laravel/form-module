@@ -92,11 +92,11 @@ export function messageBox() {
             this.actions = newActionsFinal;
             this.callbackParams = callbackParams;
 
-            let fetchContent = null;
+            let fetchContent = this.parent.getValue(boxConfig, 'fetch-content');
             // if 'fetch-content' exists ...
-            if (fetchContent = this.parent.getValue(boxConfig, 'fetch-content')) {
+            if (fetchContent) {
 
-                let route = fetchContent + '/' + this.parent.getValue(callbackParams, 'product.id');
+                let route = fetchContent + '/' + this.parent.getValue(callbackParams, 'item.id');
                 this.parent.requestGet(route)
                     .then(data => {
                         this.content = this.parent.getValue(data, 'data.html');
@@ -113,13 +113,9 @@ export function messageBox() {
          */
         goAction(key) {
             if (key in this.callbackParams) {
-
                 let callbackParams = this.callbackParams[key];
-                let livewireComponentName = this.parent.getValue(callbackParams, 'name')
-                let livewireId = this.parent.getValue(callbackParams, 'livewire_id', '0')
-                let itemId = this.parent.getValue(callbackParams, 'item_id', '0')
-                // @todo: params generic/dynamic?
-                Livewire.dispatchTo(livewireComponentName, key, {'livewireId':livewireId, 'itemId':itemId});
+                let livewireComponentName = this.parent.getValue(callbackParams, 'name');
+                Livewire.dispatchTo(livewireComponentName, key, callbackParams);
                 this.isOpen = false;
                 this.content = '';
             } else {

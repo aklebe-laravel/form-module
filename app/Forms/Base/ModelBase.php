@@ -145,8 +145,9 @@ class ModelBase extends NativeObjectBase
     /**
      * Check whether data has attributes in $cast and have to transform it before save (like json)
      *
-     * @param  array  $cleanData
+     * @param  array               $cleanData
      * @param  JsonResource|Model  $protoType
+     *
      * @return void
      */
     protected function checkUpdateItemCasteAttributes(array &$cleanData, JsonResource|Model $protoType): void
@@ -168,14 +169,16 @@ class ModelBase extends NativeObjectBase
     {
         $ttlDefault = config('system-base.cache.default_ttl', 1);
         $ttl = config('system-base.cache.object.signature.ttl', $ttlDefault);
+
         return Cache::remember('form_prototype_'.$this->getObjectEloquentModelName(), $ttl, function () {
             return $this->initDataSource(); // empty resource to know key
         });
     }
 
     /**
-     * @param  array  $itemData
+     * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
+     *
      * @return array
      * @throws Exception
      */
@@ -233,6 +236,7 @@ class ModelBase extends NativeObjectBase
                 /**
                  * prevent exception:
                  * SQLSTATE[42S22]: Column not found: 1054 Unknown column 'relatedPivotModelId' in 'field list'
+                 *
                  * @todo: maybe can placed in a cleaner way
                  */
                 unset($objectInstance->relatedPivotModelId);
@@ -249,6 +253,7 @@ class ModelBase extends NativeObjectBase
         }
 
         $updateResult['object_instance'] = $objectInstance;
+
         return $updateResult;
     }
 
@@ -264,7 +269,7 @@ class ModelBase extends NativeObjectBase
         $jsonResponse = new JsonViewResponse($this->objectFrontendLabel.' aktualisiert.');
         $successData = [
             'created' => [],
-            'updated' => []
+            'updated' => [],
         ];
 
         /**
@@ -299,35 +304,17 @@ class ModelBase extends NativeObjectBase
         }
 
         $jsonResponse->setData($successData);
+
         return $jsonResponse;
     }
-
-    // /**
-    //  * Override to update by api/form.
-    //  *
-    //  * @param  Request  $request
-    //  *
-    //  * @return Application|ResponseFactory|Response
-    //  * @throws ValidationException
-    //  */
-    // public function onApiUpdateList(Request $request): Response|Application|ResponseFactory
-    // {
-    //     $items = $request->all();
-    //     $items = data_get($items, 'items');
-    //
-    //     $jsonResponse = $this->runUpdateList($items);
-    //
-    //     return $jsonResponse->go();
-    // }
-    //
 
     /**
      * Event after saved the object itself.
      * Sync of relations should happen here.
      *
-     * @param  array  $itemData
+     * @param  array             $itemData
      * @param  JsonViewResponse  $jsonResponse
-     * @param  mixed  $objectInstance
+     * @param  mixed             $objectInstance
      *
      * @return bool
      * @throws Exception
@@ -409,9 +396,9 @@ class ModelBase extends NativeObjectBase
     }
 
     /**
-     * @param  Model  $model
+     * @param  Model   $model
      * @param  string  $propertyKey
-     * @param  array  $dataInItems
+     * @param  array   $dataInItems
      *
      * @return bool
      * @throws Exception
@@ -466,26 +453,25 @@ class ModelBase extends NativeObjectBase
         }
 
         $model->$propertyKey()->upsert($upsertList, ['id'], ['user_id']);
+
         return true;
     }
 
     /**
-     * Runs through $this->>objectRelations and returns the rootRelation once.
+     * Runs through $this->objectRelations and returns the rootRelation once.
      *
-     * @param  array  $items  Daten aus Formular
-     * @param  callable  $callback  Callback für jede Property
-     * @param  bool  $ignoreNotPresentedProperties  Wenn gesetzt, dann werden Properties nicht durchlaufen, die nicht in $items vorkommen.
+     * @param  array     $items                         Daten aus Formular
+     * @param  callable  $callback                      Callback für jede Property
+     * @param  bool      $ignoreNotPresentedProperties  Wenn gesetzt, dann werden Properties nicht durchlaufen, die nicht in $items vorkommen.
      *
      * @return bool
      */
-    public function runObjectRelationsRootProperties(array $items, callable $callback,
-        bool $ignoreNotPresentedProperties = true): bool
+    public function runObjectRelationsRootProperties(array $items, callable $callback, bool $ignoreNotPresentedProperties = true): bool
     {
         $alreadyFound = [];
         /** @var string $propertyKey */
         foreach ($this->objectRelations as $propertyKey) {
-            if ($propertyKeyDeep = explode('.',
-                $propertyKey)) { // could be more nested (like 'orders.items.options') ...
+            if ($propertyKeyDeep = explode('.', $propertyKey)) { // could be more nested (like 'orders.items.options') ...
 
                 $propertyKey = $propertyKeyDeep[0];
 
@@ -571,6 +557,7 @@ class ModelBase extends NativeObjectBase
     protected function getModelTable(): string
     {
         $modelName = $this->getObjectEloquentModelName();
+
         return app('system_base')->getModelTable($modelName);
     }
 
@@ -581,6 +568,7 @@ class ModelBase extends NativeObjectBase
     {
         $ttl = config('system-base.cache.db.signature.ttl', 0);
         $modelName = $this->getObjectEloquentModelName();
+
         return Cache::remember('form_model_table_columns_'.$modelName, $ttl, function () use ($modelName) {
             return app('system_base')->getDbColumns($this->getModelTable());
         });
@@ -591,13 +579,12 @@ class ModelBase extends NativeObjectBase
      *
      * @param  string  $element
      * @param  string  $name
-     * @param  array  $options
-     * @param  array  $parentOptions
+     * @param  array   $options
+     * @param  array   $parentOptions
      *
      * @return array
      */
-    public function prepareFormViewData(string $element, string $name, array $options = [],
-        array $parentOptions = []): array
+    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = []): array
     {
         $parentName = data_get($parentOptions, 'name', '');
 
@@ -621,9 +608,6 @@ class ModelBase extends NativeObjectBase
         // @todo: why is arrayCopyWhitelisted() not enough?
         $viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $options);
 
-        //
-        $this->calculateCallableValues($viewData);
-
         /**
          * get name by (first given wins)
          * 1) field from viewData['name']
@@ -631,14 +615,14 @@ class ModelBase extends NativeObjectBase
          * 3) take parameter $name
          * 4) add parent name to path if given
          */
-        $name = data_get($viewData, 'name') ?: data_get($viewData, 'property') ?: $name;
+        //$name = data_get($viewData, 'name') ?: data_get($viewData, 'property') ?: $name;
+        $name = $this->getElementName($viewData, $name);
         $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
 
-        // Don't include fields not in table columns ro not in resource itself!
+        // Don't include fields not in table columns or not in resource itself!
         // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
         $allColumns = $this->getModelTableColumns();
-        if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name,
-                $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
+        if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
             return $viewData;
         }
 
@@ -648,12 +632,13 @@ class ModelBase extends NativeObjectBase
         /**
          * get value by (first given wins)
          * 1) direct set by form field viewData['value']
-         * 2) from dataSource
-         * 3) viewData['default'] if given and value is empty
-         * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
+         * 2) from dataSource (if not null)
+         * 3) from field viewData['default']
+         *
+         * @todo : point 3 is questionable especially if value is false, maybe remove 'default' this way
          * @fixed: overwritten null wich was needed
          */
-        $value = data_get($viewData, 'value') ?: $resourcePrevValue;;
+        $value = data_get($viewData, 'value') ?: $resourcePrevValue;
         if (!$value && ($default = data_get($viewData, 'default', ''))) {
             $value = $default;
         }
@@ -671,15 +656,18 @@ class ModelBase extends NativeObjectBase
         $viewData['name'] = $name;
 
         //
+        $this->calculateCallableValues($viewData);
+
         return $viewData;
     }
 
     /**
      * Overwritten to pre load resource model.
      *
-     * @param  array  $data
+     * @param  array             $data
      * @param  JsonViewResponse  $jsonResponse
-     * @param  array  $additionalValidateFormat
+     * @param  array             $additionalValidateFormat
+     *
      * @return array
      * @throws ValidationException
      */

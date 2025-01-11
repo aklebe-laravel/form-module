@@ -1,52 +1,27 @@
 @php
     /**
+     * Select unterstützt kein ReadOnly wird aber hier die options deaktivieren
      *
-     * @var string $name
-     * @var mixed $value
-     * @var string $x_model
+     * @var bool $visible maybe always true because we are here
+     * @var bool $disabled enabled or disabled
+     * @var bool $read_only disallow edit
+     * @var bool $auto_complete auto fill user inputs
+     * @var string $name name attribute
+     * @var string $label label of this element
+     * @var mixed $value value attribute
+     * @var mixed $default default value
+     * @var bool $read_only
+     * @var string $description
+     * @var string $css_classes
+     * @var string $css_group
+     * @var string $x_model optional for alpine.js
+     * @var string $livewire
+     * @var bool $livewire_live
+     * @var int $livewire_debounce
+     * @var array $html_data data attributes
+     * @var array $x_data
+     * @var int $element_index
+     * @var array $options
      */
-
-    if ($value instanceof \Illuminate\Support\Collection) {
-        $value = $value->pluck('id')->toArray(); // @todo: id dynamisch rausfinden
-    }
-    if (!$value) {
-        $value = [];
-    }
-    if (!is_array($value)) {
-        $value = [$value];
-    }
-    $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
-    //dd($value);
 @endphp
-{{-- Select unterstützt kein read_only wird aber hier die options deaktivieren --}}
-<div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label class="">{{ $label }}</label>
-    @endunless
-    <select
-            name="{{ $name }}"
-            class="form-select {{ $css_classes }}"
-            @if($xModelName) x-model="{{ $xModelName }}" @endif
-            @if($disabled) disabled="disabled" @endif
-            @if($read_only) readonly @endif
-            multiple="multiple"
-            size="{{ !empty($list_size) ? $list_size : 6 }}">
-        @unless(empty($options))
-            @php
-                if (app('system_base')->isCallableClosure($options)) {
-                    $options = $options();
-                }
-            @endphp
-            @foreach($options as $k => $v)
-                <option
-                        @if(!$xModelName && in_array($k, $value)) selected="selected" @endif
-                value="{{ $k }}"
-                        @if($disabled || $read_only) disabled="disabled" @endif
-                >{{ $v }}</option>
-            @endforeach
-        @endunless
-    </select>
-    @unless(empty($description))
-        <div class="form-text decent">{{ $description }}</div>
-    @endunless
-</div>
+@include('form::components.form.select', ['multiple' => true])
