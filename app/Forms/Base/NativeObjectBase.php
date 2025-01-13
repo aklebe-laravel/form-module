@@ -30,6 +30,10 @@ class NativeObjectBase
      */
     const int UNSELECT_RELATION_IDENT = -1;
 
+    const int switch3No = -100;
+    const int switch3Unused = 0;
+    const int switch3Yes = 100;
+
     /**
      * @var NativeObjectBaseLivewire|null
      */
