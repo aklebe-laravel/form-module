@@ -27,6 +27,7 @@
 
     $debug ??= false;
 
+    $value = $value ?: []; // force array
     $jsAlpineSortedName = str_replace('.','_', 'sortableMultiSelect_'.$livewire.'_'.$name);
     $systemService = app('system_base');
     $keyedValues = $systemService->assignArrayKeysByValue($value);
