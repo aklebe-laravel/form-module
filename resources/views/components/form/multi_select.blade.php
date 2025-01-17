@@ -23,5 +23,8 @@
      * @var int $element_index
      * @var array $options
      */
+
+    $value = $value ?: []; // force array
+    $multiple = true;
 @endphp
-@include('form::components.form.select', ['multiple' => true])
+@include('form::components.form.select')
