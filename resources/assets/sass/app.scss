@@ -1,0 +1,11 @@
+.el-select {
+    @extend .form-select;
+    --bs-form-select-bg-img: none;
+}
+
+.el-select .el-option {
+}
+
+.el-select .el-option.selected {
+    background-color: #e0e0ff;
+}
