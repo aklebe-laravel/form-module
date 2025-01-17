@@ -1,4 +1,8 @@
-// import {toJSON} from "lodash/seq";
+import sort from '@alpinejs/sort'
+Alpine.plugin(sort)
+
+import {SortableMultiSelect} from "./sortableMultiSelect";
+window.SortableMultiSelect = SortableMultiSelect;
 
 /**
  *

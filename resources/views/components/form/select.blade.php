@@ -15,17 +15,21 @@
      * @var string $css_classes
      * @var string $css_group
      * @var string $x_model optional for alpine.js
+     * @var string $xModelName optional for alpine.js
      * @var string $livewire
      * @var bool $livewire_live
      * @var int $livewire_debounce
      * @var array $html_data data attributes
+     * @var array $html_data x-on attributes
      * @var array $x_data
      * @var int $element_index
      * @var array $options
      */
 
     $multiple ??= false;
-    $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
+    if (!isset($xModelName)) {
+        $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
+    }
     $_liveWireAttr = '';
     if ($livewire) {
         $_liveWireAttr = 'wire:model'.(($livewire_live) ? ('.live'.(($livewire_debounce) ? ('.debounce.'.$livewire_debounce.'ms') : '')) : '').'="'.$livewire.'.'.$name.'"';
@@ -43,6 +47,7 @@
             @if($multiple) multiple="multiple" size="{{ !empty($list_size) ? $list_size : 6 }}" @endif
             @if($read_only) readonly @endif
             @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
+            @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
     >
         @unless(empty($options))
             @php
