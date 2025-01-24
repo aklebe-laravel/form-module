@@ -12,6 +12,9 @@
     $editFormHtml = data_get($editForm, 'additional.form_html', '');
     $editFormObject = data_get($editForm, 'additional.form_object');
     $description = data_get($editForm, 'additional.form_object.description');
+    if ($description) {
+        $description = nl2br(trim($description));
+    }
     $title = data_get($editForm, 'additional.form_object.title');
     $editFormModelObject = data_get($editFormObject, 'object');
 @endphp
@@ -41,7 +44,7 @@
                     <div class="card-text">
                         @if ($description)
                             <div class="alert alert-light">
-                                {{ $description }}
+                                {!! $description !!}
                             </div>
                         @endif
                         <div>

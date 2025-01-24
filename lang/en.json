@@ -12,7 +12,7 @@
   "Meta description used for all kind of searching": "Meta description used for all kind of searching",
   "Meta description": "Meta description",
   "Missing the confirmation password.": "Missing the confirmation password.",
-  "module_form_ensure_create_instance": "Some fields will only be shown if the object was created successfully.",
+  "module_form_ensure_create_instance": "Some fields will only be shown and/or be used, if the object ':name' was created successfully.",
   "Name": "Name",
   "Parent": "Parent",
   "Password is not equal the confirmation.": "Password is not equal the confirmation.",
