@@ -19,6 +19,9 @@
     }
 
     $description = data_get($editForm, 'additional.form_object.description');
+    if ($description) {
+        $description = nl2br(trim($description));
+    }
     $title = data_get($editForm, 'additional.form_object.title');
     if (!($editFormModelObject = data_get($editFormObject, 'object'))) {
         $_formErrors[] = 'Missing form_object.object';
@@ -69,8 +72,8 @@
                     </div>
                     <div class="card-text">
                         @if ($description)
-                            <div class="alert alert-light">
-                                {{ $description }}
+                            <div class="alert alert-warning">
+                                {!! $description !!}
                             </div>
                         @endif
                         <div>

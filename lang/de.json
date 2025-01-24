@@ -12,7 +12,7 @@
   "Meta description used for all kind of searching": "Meta-Beschreibung für alle Arten der Suche",
   "Meta description": "Meta-Beschreibung",
   "Missing the confirmation password.": "Passwort-Bestätigung fehlt.",
-  "module_form_ensure_create_instance": "Einige Felder werden erst dann angezeigt, wenn das Objekt erfolgreich angelegt wurde.",
+  "module_form_ensure_create_instance": "Einige Felder können erst dann angezeigt und/oder genutzt werden, wenn das Objekt ':name' erstmalig erfolgreich angelegt wurde.",
   "Name": "Name",
   "Parent": "Übergeordnet",
   "Password is not equal the confirmation.": "Das Passwort stimmt nicht mit der Passwort-Bestätigung überein.",

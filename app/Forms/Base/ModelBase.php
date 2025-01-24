@@ -138,7 +138,7 @@ class ModelBase extends NativeObjectBase
             'css_classes' => 'form-edit',
             'livewire'    => 'dataTransfer',
             'title'       => $this->makeFormTitle($this->getDataSource(), 'id'),
-            'description' => !$this->getDataSource()->getKey() ? 'module_form_ensure_create_instance' : '',
+            'description' => !$this->getDataSource()->getKey() ? __('module_form_ensure_create_instance', ['name' => $this->objectFrontendLabel]) : '',
         ];
     }
 
