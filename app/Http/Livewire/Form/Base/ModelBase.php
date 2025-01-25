@@ -229,21 +229,25 @@ class ModelBase extends NativeObjectBase
 
     /**
      * Called Livewire/FiledUpload
+     * Overwrite this if needed!
      *
      * Upload relevant relation should be updated from here.
      * Otherwise, the form don't know about the (child) upload in \Modules\WebsiteBase\Http\Livewire\FilesUpload::finishUpload
      * and the relation to the uploaded image is lost.
      *
-     * @param  string  $relationPath
-     * @param  mixed   $mediaItemId
+     * @param  mixed  $mediaItemId
      *
      * @return void
      */
     #[On('upload-process-finished')]
-    public function uploadProcessFinished(string $relationPath, mixed $mediaItemId): void
+    public function uploadProcessFinished(mixed $mediaItemId): void
     {
-        // don't miss the new relation by pressing accept/save form ...
-        $this->relationUpdates[$relationPath][] = $mediaItemId;
+        $relationPath = 'mediaItems'; // should be defined per delivered form later ...
+
+        if ($relationPath) {
+            // don't miss the new relation by pressing accept/save form ...
+            $this->relationUpdates[$relationPath][] = $mediaItemId;
+        }
 
         $this->reopenFormIfNeeded();
     }
