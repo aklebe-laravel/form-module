@@ -241,11 +241,16 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
+     * Destroy all relevant data from previous opened form.
+     * Should be overwritten if there is more to reset.
+     *
      * @return void
      */
-    public function resetFormResult(): void
+    public function resetFormRelevantData(): void
     {
         $this->_formResult = null;
+        $this->dataTransfer = [];
+        $this->dataSource = null;
     }
 
     /**
@@ -426,9 +431,9 @@ class NativeObjectBase extends BaseComponent
     #[On('open-form')]
     public function openForm(mixed $id, bool $forceReset = true): void
     {
-        if ($forceReset) {
-            $this->resetFormResult();
-            $this->dataTransfer = [];
+        if ($forceReset || !$id) {
+            // completely destroy data from old form ...
+            $this->resetFormRelevantData();
         }
 
         $this->isFormOpen = true;

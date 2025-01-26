@@ -100,6 +100,7 @@ class ModelBase extends NativeObjectBase
 
         // close form after deleting
         $this->closeFormAndRefreshDatatable();
+
         return true;
     }
 
@@ -169,7 +170,7 @@ class ModelBase extends NativeObjectBase
                 $updateList = [
                     [
                         'data'       => $this->dataTransfer,
-                        'parentData' => $this->parentData
+                        'parentData' => $this->parentData,
                     ],
 
                 ];
@@ -192,13 +193,15 @@ class ModelBase extends NativeObjectBase
 
         $jsonResponse = new JsonViewResponse();
         $jsonResponse->setErrorMessage('Unable to load data or validation error.');
+
         return $jsonResponse;
     }
 
     /**
-     * @param  string  $relationPath
+     * @param  string    $relationPath
      * @param  iterable  $values
-     * @param  bool  $skipRender
+     * @param  bool      $skipRender
+     *
      * @return void
      */
     #[On('update-relations')]
@@ -226,19 +229,37 @@ class ModelBase extends NativeObjectBase
 
     /**
      * Called Livewire/FiledUpload
+     * Overwrite this if needed!
      *
      * Upload relevant relation should be updated from here.
      * Otherwise, the form don't know about the (child) upload in \Modules\WebsiteBase\Http\Livewire\FilesUpload::finishUpload
      * and the relation to the uploaded image is lost.
      *
-     * @param  string  $event
      * @param  mixed  $mediaItemId
+     *
      * @return void
      */
     #[On('upload-process-finished')]
-    public function uploadProcessFinished(string $event, mixed $mediaItemId): void
+    public function uploadProcessFinished(mixed $mediaItemId): void
     {
+        $relationPath = 'mediaItems'; // should be defined per delivered form later ...
+
+        if ($relationPath) {
+            // don't miss the new relation by pressing accept/save form ...
+            $this->relationUpdates[$relationPath][] = $mediaItemId;
+        }
+
         $this->reopenFormIfNeeded();
     }
 
+    /**
+     * @return void
+     */
+    public function resetFormRelevantData(): void
+    {
+        parent::resetFormRelevantData();
+
+        // Also reset relations!
+        $this->relationUpdates = [];
+    }
 }
