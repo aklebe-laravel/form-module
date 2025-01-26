@@ -129,9 +129,11 @@ class NativeObjectBase extends BaseComponent
     ];
 
     /**
+     * cached form by calling getFormInstance()
+     *
      * @var NativeObjectBaseForm|null
      */
-    protected ?NativeObjectBaseForm $_form = null;
+    private ?NativeObjectBaseForm $_form = null;
 
     /**
      * @var JsonResource|null
@@ -293,6 +295,7 @@ class NativeObjectBase extends BaseComponent
     /**
      * Get the form by model name without namespace and find namespace automatically.
      * See Modules/Form/Config/config.php for details.
+     * Instance is calculated once and will be cached for the current process.
      *
      * @param  string  $formName  just the form name without namespace
      *
@@ -300,19 +303,22 @@ class NativeObjectBase extends BaseComponent
      */
     public function getFormInstance(string $formName = ''): ?NativeObjectBaseForm
     {
+        if ($this->_form) {
+            return $this->_form;
+        }
+
         if ($modelName = app('system_base')->findModuleClass($formName ?: $this->getFormName(), 'model-forms')) {
             try {
-                /** @var NativeObjectBaseForm $form */
-                $form = App::make($modelName);
+                $this->_form = App::make($modelName);
 
                 // assign this as livewire form
-                $form->formLivewire = $this;
+                $this->_form->formLivewire = $this;
 
                 // set up defaults
-                $this->objectInstanceDefaultValues = $form->makeObjectInstanceDefaultValues();
+                $this->objectInstanceDefaultValues = $this->_form->makeObjectInstanceDefaultValues();
 
                 // return form
-                return $form;
+                return $this->_form;
             } catch (Exception $e) {
                 Log::error($e->getMessage());
             }
@@ -357,19 +363,18 @@ class NativeObjectBase extends BaseComponent
             return null;
         }
 
-        $this->_form = $this->getFormInstance($this->getFormName());
-        if (!$this->_form) {
+        if (!($form = $this->getFormInstance($this->getFormName()))) {
             Log::error(sprintf("Form '%s' not found!", $this->getFormName()));
 
             return null;
         }
 
         // calculate and render form
-        $this->_formResult = $this->_form->renderWithResource($this->formObjectId);
+        $this->_formResult = $form->renderWithResource($this->formObjectId);
 
         // after form calculation, adjust permissions
-        $this->readonly = !$this->_form->canEdit();
-        $this->actionable = $this->_form->canEdit();
+        $this->readonly = !$form->canEdit();
+        $this->actionable = $form->canEdit();
 
         // @todo: object deprecated change to form_object.dataSource?
         // Important to check if $this->dataTransfer was already filled!

@@ -27,13 +27,13 @@ class ModelBase extends NativeObjectBase
      */
     public string $eloquentModelName = '';
 
-    /**
-     * The relation ids from sub data-table grids indexed by property name
-     * (same like laravel model relation like 'categories', 'mediaItems', 'users', ...)
-     *
-     * @var array
-     */
-    public array $relationUpdates = [];
+    ///**
+    // * The relation ids from sub data-table grids indexed by property name
+    // * (same like laravel model relation like 'categories', 'mediaItems', 'users', ...)
+    // *
+    // * @var array
+    // */
+    //public array $relationUpdates = [];
 
     /**
      * @return string
@@ -115,18 +115,17 @@ class ModelBase extends NativeObjectBase
         // Model have to exists ...
         if ($modelLoaded = $form->initDataSource($this->formObjectId)) {
 
-            foreach ($this->relationUpdates as $propertyInCamelCase => $relationIdUpdates) {
+            // format to id array
+            $form->runObjectRelationsRootProperties($this->dataTransfer, function ($propertyKey, $dataInItems) use ($modelLoaded) {
 
-                $originalRelationIds = $modelLoaded->$propertyInCamelCase()
-                    ->pluck($modelLoaded->getKeyName())
-                    ->toArray();
-
-                if ((count($relationIdUpdates) > 0) || (count($relationIdUpdates) != count($originalRelationIds))) {
-                    $this->dataTransfer[$propertyInCamelCase] = $relationIdUpdates;
-                } else {
-                    $this->dataTransfer[$propertyInCamelCase] = $originalRelationIds;
+                $idArray = [];
+                // each relation like 'mediaItems'
+                foreach ($this->dataTransfer[$propertyKey] as $v) {
+                    $idArray[] = $v['id'];
                 }
-            }
+                $this->dataTransfer[$propertyKey] = $idArray;
+
+            });
 
             try {
 
@@ -144,7 +143,6 @@ class ModelBase extends NativeObjectBase
                 Log::error($exception->getTraceAsString());
 
                 $this->addErrorMessage('Unable to validate Data.');
-
             }
 
         }
@@ -198,16 +196,50 @@ class ModelBase extends NativeObjectBase
     }
 
     /**
-     * @param  string    $relationPath
-     * @param  iterable  $values
-     * @param  bool      $skipRender
+     * add an object with a field 'id'
+     *
+     * @param  string  $relationPath
+     * @param  mixed   $itemId
+     *
+     * @return void
+     */
+    private function addIdToRelationIfNotExists(string $relationPath, mixed $itemId): void
+    {
+        if (isset($this->dataTransfer[$relationPath])) {
+            foreach ($this->dataTransfer[$relationPath] as $v) {
+                if ($v['id'] == $itemId) {
+                    return;
+                }
+            }
+            $this->dataTransfer[$relationPath][] = ['id' => $itemId];
+        }
+    }
+
+    /**
+     * @param  string  $relationPath
+     * @param  array   $values
+     * @param  bool    $skipRender
      *
      * @return void
      */
     #[On('update-relations')]
-    public function updateRelations(string $relationPath, iterable $values, bool $skipRender = true): void
+    public function updateRelations(string $relationPath, array $values, bool $skipRender = true): void
     {
-        $this->relationUpdates[$relationPath] = $values;
+        // check relation like 'mediaItems' exists
+        if (isset($this->dataTransfer[$relationPath])) {
+            $newRelation = [];
+            // assign all values still present, so not presented values are deleted after ...
+            foreach ($this->dataTransfer[$relationPath] as $v) {
+                if (in_array($v['id'], $values)) {
+                    $newRelation[] = $v;
+                }
+            }
+            $this->dataTransfer[$relationPath] = $newRelation;
+
+            foreach ($values as $v) {
+                $this->addIdToRelationIfNotExists($relationPath, $v);
+            }
+        }
 
         // avoid rerender form (and hide the current form tab)
         if ($skipRender) {
@@ -242,24 +274,10 @@ class ModelBase extends NativeObjectBase
     #[On('upload-process-finished')]
     public function uploadProcessFinished(mixed $mediaItemId): void
     {
-        $relationPath = 'mediaItems'; // should be defined per delivered form later ...
-
-        if ($relationPath) {
-            // don't miss the new relation by pressing accept/save form ...
-            $this->relationUpdates[$relationPath][] = $mediaItemId;
-        }
+        // don't miss the new relation by pressing accept/save form ...
+        $this->addIdToRelationIfNotExists('mediaItems', $mediaItemId);
 
         $this->reopenFormIfNeeded();
     }
 
-    /**
-     * @return void
-     */
-    public function resetFormRelevantData(): void
-    {
-        parent::resetFormRelevantData();
-
-        // Also reset relations!
-        $this->relationUpdates = [];
-    }
 }
