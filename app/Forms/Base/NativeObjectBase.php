@@ -24,12 +24,6 @@ use Modules\SystemBase\app\Models\JsonViewResponse;
  */
 class NativeObjectBase
 {
-    /**
-     * default index of unselected item in select boxes
-     *
-     */
-    const int UNSELECT_RELATION_IDENT = -1;
-
     const int switch3No = -100;
     const int switch3Unused = 0;
     const int switch3Yes = 100;
@@ -228,11 +222,11 @@ class NativeObjectBase
             // correct key if needed
             $key = $this->getElementName($formElement, $key);
 
-            // Check for select relations with value self::UNSELECT_RELATION_IDENT
+            // Check for select relations with value 'No choice'
             // @todo: not only 'select' are select fields! Also check all other select elements!
             if (data_get($formElement, 'html_element') === 'select') {
-                // Do not use === to comparing self::UNSELECT_RELATION_IDENT!
-                if (data_get($data, $key, '') == self::UNSELECT_RELATION_IDENT) {
+                // Do not use === to comparing selectValueNoChoice!
+                if (data_get($data, $key, '') == app('system_base')::selectValueNoChoice) {
                     $data[$key] = null;
                 }
             }
