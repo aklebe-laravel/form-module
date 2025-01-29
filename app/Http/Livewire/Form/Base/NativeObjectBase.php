@@ -357,7 +357,7 @@ class NativeObjectBase extends BaseComponent
      * @return JsonResource|null
      * @todo: replace and resolve
      */
-    protected function getForm(): ?JsonResource
+    protected function generateFormResult(): ?JsonResource
     {
         if (!$this->isFormOpen) {
             return null;
@@ -445,7 +445,7 @@ class NativeObjectBase extends BaseComponent
         $this->formObjectId = $id;
 
         // calculate and generate form
-        $this->getForm();
+        $this->generateFormResult();
 
         // event
         $this->afterOpenForm();

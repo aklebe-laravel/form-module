@@ -67,8 +67,8 @@ class ModelBase extends NativeObjectBase
         if ($id) {
 
             $builder = $this->getObjectEloquentModel()->with($this->objectRelations);
-            if ($this->frontendKey) {
-                $builder->loadByFrontEnd($id, $this->frontendKey);
+            if (static::frontendKey) {
+                $builder->loadByFrontEnd($id, static::frontendKey);
             } else {
                 $builder->whereId($id);
             }
@@ -266,7 +266,7 @@ class ModelBase extends NativeObjectBase
      */
     public function runUpdateList(array $items): JsonViewResponse
     {
-        $jsonResponse = new JsonViewResponse($this->objectFrontendLabel.' aktualisiert.');
+        $jsonResponse = new JsonViewResponse(__(":name updated.", ['name' => __($this->objectFrontendLabel)]));
         $successData = [
             'created' => [],
             'updated' => [],

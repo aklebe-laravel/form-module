@@ -113,7 +113,7 @@ class NativeObjectBase
      *
      * @var string
      */
-    public string $frontendKey = '';
+    public const string frontendKey = '';
 
     /**
      * @var array|string[]
@@ -466,7 +466,7 @@ class NativeObjectBase
      */
     public function runUpdateList(array $items): JsonViewResponse
     {
-        $jsonResponse = new JsonViewResponse($this->objectFrontendLabel.' aktualisiert.');
+        $jsonResponse = new JsonViewResponse(__(":name updated.", ['name' => __($this->objectFrontendLabel)]));
         $successData = [
             'created' => [],
             'updated' => [],
