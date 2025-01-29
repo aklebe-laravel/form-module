@@ -118,12 +118,18 @@ class ModelBase extends NativeObjectBase
             // format to id array
             $form->runObjectRelationsRootProperties($this->dataTransfer, function ($propertyKey, $dataInItems) use ($modelLoaded) {
 
-                $idArray = [];
-                // each relation like 'mediaItems'
-                foreach ($this->dataTransfer[$propertyKey] as $v) {
-                    $idArray[] = $v['id'];
+                if (method_exists($modelLoaded->$propertyKey(), 'sync') || (method_exists($modelLoaded->$propertyKey(), 'saveMany'))) {
+
+                    $idArray = [];
+                    // each relation like 'mediaItems'
+                    foreach ($this->dataTransfer[$propertyKey] as $v) {
+                        if (is_array($v) && isset($v['id'])) {
+                            $idArray[] = $v['id']; // @todo: resolve id
+                        }
+                    }
+                    $this->dataTransfer[$propertyKey] = $idArray;
+
                 }
-                $this->dataTransfer[$propertyKey] = $idArray;
 
             });
 
