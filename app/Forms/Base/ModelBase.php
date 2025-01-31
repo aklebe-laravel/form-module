@@ -5,11 +5,11 @@ namespace Modules\Form\app\Forms\Base;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\SystemBase\app\Models\JsonViewResponse;
+use Modules\SystemBase\app\Services\CacheService;
 
 /**
  * Form base class for Eloquent-Models as objects.
@@ -167,12 +167,10 @@ class ModelBase extends NativeObjectBase
      */
     public function getEloquentModelPrototyp(): JsonResource|Model
     {
-        $ttlDefault = config('system-base.cache.default_ttl', 1);
-        $ttl = config('system-base.cache.object.signature.ttl', $ttlDefault);
-
-        return Cache::remember('form_prototype_'.$this->getObjectEloquentModelName(), $ttl, function () {
+        return app(CacheService::class)->rememberUseConfig('form_prototype_'.$this->getObjectEloquentModelName(), 'system-base.cache.object.signature.ttl', function () {
             return $this->initDataSource(); // empty resource to know key
         });
+
     }
 
     /**
@@ -506,10 +504,9 @@ class ModelBase extends NativeObjectBase
         $preparedDiffKeyArray = [];
 
         // remove relations
-        $this->runObjectRelationsRootProperties($itemData,
-            function ($propertyKey, $dataInItems) use (&$preparedDiffKeyArray) {
-                $preparedDiffKeyArray[$propertyKey] = [];
-            });
+        $this->runObjectRelationsRootProperties($itemData, function ($propertyKey, $dataInItems) use (&$preparedDiffKeyArray) {
+            $preparedDiffKeyArray[$propertyKey] = [];
+        });
 
         // get diff
         $result = array_diff_key($itemData, $preparedDiffKeyArray);
@@ -566,12 +563,10 @@ class ModelBase extends NativeObjectBase
      */
     protected function getModelTableColumns(): array
     {
-        $ttl = config('system-base.cache.db.signature.ttl', 0);
-        $modelName = $this->getObjectEloquentModelName();
-
-        return Cache::remember('form_model_table_columns_'.$modelName, $ttl, function () use ($modelName) {
+        return app(CacheService::class)->rememberUseConfig('form_model_table_columns_'.$this->getObjectEloquentModelName(), 'system-base.cache.db.signature.ttl', function () {
             return app('system_base')->getDbColumns($this->getModelTable());
         });
+
     }
 
     /**
@@ -600,8 +595,7 @@ class ModelBase extends NativeObjectBase
         if ($parentOptions) {
             // @todo: why is arrayCopyWhitelisted() not enough?
             //$viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $parentOptions);
-            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData, $parentOptions,
-                $this->inheritViewData);
+            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData, $parentOptions, $this->inheritViewData);
         }
 
         // merge/inherit current data
