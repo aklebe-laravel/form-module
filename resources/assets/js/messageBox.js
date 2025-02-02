@@ -12,22 +12,22 @@ export function messageBox() {
         parent: null,
 
         /**
-         *
+         * shows message-box.blade.php
          */
         isOpen: false,
 
         /**
-         *
+         * title for message-box.blade.php
          */
         title: '',
 
         /**
-         *
+         * content for message-box.blade.php
          */
         content: '',
 
         /**
-         *
+         * buttons looped in message-box.blade.php
          */
         actions: [],
 
@@ -81,6 +81,7 @@ export function messageBox() {
             }
             this.title = this.parent.trans(this.parent.getValue(boxConfig, 'title'));
 
+            // action keys from messageBox.js
             let newActions = this.parent.getValue(boxConfig, 'actions');
             let newActionsFinal = [];
             newActions.forEach(function (item) {
@@ -119,7 +120,7 @@ export function messageBox() {
                 this.isOpen = false;
                 this.content = '';
             } else {
-                console.error('Key not found: ' + key + ' in callbackParams.');
+                console.error('Key not found: ' + key + ' in callbackParams. Check syntax/params in messageBox.show()');
             }
         }
     }

@@ -13,7 +13,7 @@ export class SortableMultiSelect {
      *
      * @type {{}}
      */
-    selectOptionValues = {};
+    selectOptionValues = [];
 
     /**
      *
@@ -27,11 +27,11 @@ export class SortableMultiSelect {
      * @param wire
      */
     constructor(config, wire) {
-        this.selectOptionItems = config.selectOptionItems;
-        // this.selectOptionValues = config.selectOptionValues;
+        this.selectOptionItems = config.selectOptionItems ?? [];
+        this.selectOptionValues = config.selectOptionValues ?? [];
         this.debug = config.debug;
 
-        this.selectOptionValues = wire;
+        this.selectOptionValues = wire ?? [];
     }
 
     /**

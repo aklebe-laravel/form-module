@@ -54,6 +54,7 @@
     }
     $jsSortableConfig = [
         'selectOptionItems' => $jsOptions,
+        'selectOptionValues' => [],
         'debug' => $debug,
     ];
 @endphp
