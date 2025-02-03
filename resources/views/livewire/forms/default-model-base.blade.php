@@ -1,5 +1,7 @@
 @php
-    /** @var \Modules\Form\app\Http\Livewire\Form\Base\ModelBase $this */
+    use Modules\Form\app\Http\Livewire\Form\Base\ModelBase;
+
+    /** @var ModelBase $this */
 
     $_formErrors = [];
     if (!($editForm = $this->getFormResult())) {
@@ -14,17 +16,17 @@
         $_formErrors[] = 'Empty Form HTML!';
     }
 
-    if (!($editFormObject = data_get($editForm, 'additional.form_object'))) {
-        $_formErrors[] = 'Missing form_object';
+    if (!($editFormObject = data_get($editForm, 'additional.final_form_elements'))) {
+        $_formErrors[] = 'Missing final_form_elements';
     }
 
-    $description = data_get($editForm, 'additional.form_object.description');
+    $description = data_get($editForm, 'additional.final_form_elements.description');
     if ($description) {
         $description = nl2br(trim($description));
     }
-    $title = data_get($editForm, 'additional.form_object.title');
-    if (!($editFormModelObject = data_get($editFormObject, 'object'))) {
-        $_formErrors[] = 'Missing form_object.object';
+    $title = data_get($editForm, 'additional.final_form_elements.title');
+    if (!($editFormModelObject = $this->dataTransfer)) {
+        $_formErrors[] = 'Missing form data';
     }
 @endphp
 <div>

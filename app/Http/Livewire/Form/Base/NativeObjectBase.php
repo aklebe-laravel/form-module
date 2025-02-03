@@ -217,11 +217,6 @@ class NativeObjectBase extends BaseComponent
     {
         // maybe this version is also correct?
         return $this->getWireCallString('save', [data_get($this->dataTransfer, 'id', '')]);
-
-        //        $editForm = $this->getFormResult();
-        //        $editFormObject = data_get($editForm, 'additional.form_object');
-        //        $editFormModelObject = data_get($editFormObject, 'object');
-        //        return $this->getWireCallString('save', [data_get($editFormModelObject, 'id', '')]);
     }
 
     /**
@@ -363,7 +358,7 @@ class NativeObjectBase extends BaseComponent
             return null;
         }
 
-        if (!($form = $this->getFormInstance($this->getFormName()))) {
+        if (!($form = $this->getFormInstance())) {
             Log::error(sprintf("Form '%s' not found!", $this->getFormName()));
 
             return null;
@@ -376,17 +371,27 @@ class NativeObjectBase extends BaseComponent
         $this->readonly = !$form->canEdit();
         $this->actionable = $form->canEdit();
 
-        // @todo: object deprecated change to form_object.dataSource?
         // Important to check if $this->dataTransfer was already filled!
         if (!$this->dataTransfer) {
-            if ($object = data_get($this->_formResult, 'additional.form_object.object')) {
-                $this->dataTransfer = app('system_base')->toArray($object);
-            } else {
-                $this->dataTransfer = [];
-            }
+            $this->refreshTransferData();
         }
 
         return $this->_formResult;
+    }
+
+    /**
+     * create or renew dataTransfer based on dataSource
+     *
+     * @return void
+     */
+    public function refreshTransferData(): void
+    {
+        //if ($object = data_get($this->_formResult, 'additional.final_form_elements.object')) {
+        if ($object = $this->getDataSource()) {
+            $this->dataTransfer = app('system_base')->toArray($object);
+        } else {
+            $this->dataTransfer = [];
+        }
     }
 
     /**
@@ -557,11 +562,18 @@ class NativeObjectBase extends BaseComponent
 
         $res = $this->saveFormData();
         if (!$res->hasErrors()) {
+
             if ($res->getMessage()) {
                 $this->addSuccessMessage($res->getMessage());
             } else {
                 $this->addSuccessMessage(__('Data saved successfully.'));
             }
+
+            // After saving was successful, refresh the transferData.
+            // Otherwise, a reopened form has outdated data!
+            //
+            //$this->dataTransfer = [];
+            $this->refreshTransferData();
 
             // If related datatable exists, we want to close the form.
             // Otherwise, do not close form if no table present (like user profile)
@@ -570,6 +582,7 @@ class NativeObjectBase extends BaseComponent
             } else {
                 $this->reopenFormIfNeeded(true);
             }
+
         } else {
             $this->addErrorMessages($res->getErrors());
 

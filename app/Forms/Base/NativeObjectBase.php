@@ -123,6 +123,9 @@ class NativeObjectBase
     ];
 
     /**
+     * cached form elements
+     * use getFinalFormElements()
+     *
      * @var array
      */
     private array $finalFormElements = [];
@@ -410,8 +413,8 @@ class NativeObjectBase
     {
         return [
             'css_classes' => 'form-edit',
+            // dataTransfer is the container property we want sync with livewire
             'livewire'    => 'dataTransfer',
-            'object'      => $this->getDataSource(), // @todo: remove
             'title'       => $this->makeFormTitle($this->getDataSource(), 'id'),
         ];
     }
@@ -442,17 +445,18 @@ class NativeObjectBase
     {
         $resource = $this->initDataSource($id);
 
-        //
+        // prepare it once before dispatch event
         $this->getFinalFormElements();
 
         // fire event for modules
         BeforeRenderForm::dispatch($this);
 
-        $html = $this->renderElement('full_form', '', $this->finalFormElements);
+        $html = $this->renderElement('full_form', '', $this->getFinalFormElements());
 
+        // additional is part of JsonResource to add custom metadata
         $resource->additional = [
-            'form_html'   => $html,
-            'form_object' => $this->finalFormElements,
+            'form_html'           => $html,
+            'final_form_elements' => $this->getFinalFormElements(),
         ];
 
         return $resource;
@@ -571,8 +575,7 @@ class NativeObjectBase
     protected function makeFormTitle(?JsonResource $dataSource, string $displayKey): string
     {
         if ($dataSource) {
-            $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel),
-                data_get($dataSource, $displayKey, 0));
+            $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel), data_get($dataSource, $displayKey, 0));
         } else {
             $result = sprintf(__("Create %s"), __($this->objectFrontendLabel));
         }
@@ -633,7 +636,8 @@ class NativeObjectBase
         if ($parentOptions) {
             // @todo: why is arrayCopyWhitelisted() not enough?
             //$viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $parentOptions);
-            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData, $parentOptions,
+            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData,
+                $parentOptions,
                 $this->inheritViewData);
         }
 

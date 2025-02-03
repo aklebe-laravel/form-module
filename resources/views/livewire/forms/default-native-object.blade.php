@@ -10,13 +10,15 @@
     $showFormActions = ($actionable && $this->formActionButtons);
 
     $editFormHtml = data_get($editForm, 'additional.form_html', '');
-    $editFormObject = data_get($editForm, 'additional.form_object');
-    $description = data_get($editForm, 'additional.form_object.description');
+    $editFormObject = data_get($editForm, 'additional.final_form_elements');
+    $description = data_get($editForm, 'additional.final_form_elements.description');
     if ($description) {
         $description = nl2br(trim($description));
     }
-    $title = data_get($editForm, 'additional.form_object.title');
-    $editFormModelObject = data_get($editFormObject, 'object');
+    $title = data_get($editForm, 'additional.final_form_elements.title');
+    if (!($editFormModelObject = $this->dataTransfer)) {
+        $_formErrors[] = 'Missing form data';
+    }
 @endphp
 <div>
     @include('inc.messages')
