@@ -54,7 +54,7 @@ class NativeObjectBase
         'icon'              => null,
         'id'                => '',
         'label'             => '',
-        'label_limit'       => 50,
+        'label_limit'       => 40,
         'livewire'          => '',
         'livewire_live'     => false,
         'livewire_debounce' => 750, // (in ms, but without suffix 'ms' here) only used when livewire_live=true
