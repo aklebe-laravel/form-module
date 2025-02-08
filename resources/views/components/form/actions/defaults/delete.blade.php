@@ -19,7 +19,9 @@
     ];
 @endphp
 @if ($itemId)
-    <button x-on:click="messageBox.show('__default__.data-table.delete', {{ json_encode($messageBoxParamsDelete) }} )"
-            type="button"
-            class="btn btn-danger form-action-delete">{{ $acceptLabel ?? __("Delete") }}</button>
+    @include('form::components.form.actions.defaults.default-button',[
+        'buttonLabel' => $acceptLabel ?? __("Delete"),
+        'buttonClick' => "messageBox.show('__default__.data-table.delete', ".json_encode($messageBoxParamsDelete).")",
+        'buttonCss' => 'btn-danger form-action-delete',
+    ])
 @endif

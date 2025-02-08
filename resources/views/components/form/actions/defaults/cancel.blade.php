@@ -8,5 +8,8 @@
      * @var string $cancelLabel
      */
 @endphp
-<button wire:click="{{ $this->getDefaultWireFormCancel() }}" type="button"
-        class="btn btn-outline-secondary form-action-cancel">{{ $cancelLabel ?? __("Cancel") }}</button>
+@include('form::components.form.actions.defaults.default-button',[
+    'buttonLabel' => $cancelLabel ?? __("Cancel"),
+    'buttonClick' => $this->getDefaultWireFormCancel(),
+    'buttonCss' => 'btn-outline-secondary form-action-cancel',
+])

@@ -68,6 +68,15 @@ class NativeObjectBase
     ];
 
     /**
+     * @var array
+     */
+    public array $defaultTabPageData = [
+        'css_classes' => '',
+        'disabled'    => false,
+        'visible'     => true,
+    ];
+
+    /**
      * inherited nested form fields in following order:
      * - whole form data array
      * - tab_controls
@@ -428,6 +437,19 @@ class NativeObjectBase
     {
         if (!$this->finalFormElements) {
             $this->finalFormElements = $this->getFormElements();
+
+            if (isset($this->finalFormElements['tab_controls'])) {
+                // inherit tab pages defaults ...
+                foreach ($this->finalFormElements['tab_controls'] as &$tabControlData) {
+                    foreach ($tabControlData['tab_pages'] as &$tabPage) {
+                        if (empty($tabPage['tab'])) {
+                            continue;
+                        }
+                        $defaultData = $this->defaultTabPageData; // just a copy for the next step
+                        $tabPage = app('system_base')->arrayMergeRecursiveDistinct($defaultData, $tabPage);
+                    }
+                }
+            }
 
             // fire event for modules
             FinalFormElements::dispatch($this);

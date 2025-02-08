@@ -8,5 +8,8 @@
      * @var string $acceptLabel
      */
 @endphp
-<button wire:click="{{ $this->getDefaultWireFormAccept() }}" type="button"
-        class="btn btn-primary form-action-accept">{{ $acceptLabel ?? __("Accept") }}</button>
+@include('form::components.form.actions.defaults.default-button',[
+    'buttonLabel' => $acceptLabel ?? __("Accept"),
+    'buttonClick' => $this->getDefaultWireFormAccept(),
+    'buttonCss' => 'btn-primary form-action-accept',
+])

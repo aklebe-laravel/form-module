@@ -26,7 +26,7 @@
                 alt="{{ $value }}"
             >
         @else
-            <div class="bg-light text-danger p-4">
+            <div class="bg-light text-danger p-4 fake-img">
                 {{ __('No Image') }}
             </div>
         @endif
