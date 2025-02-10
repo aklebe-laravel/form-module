@@ -57,7 +57,7 @@
                 <div class="card-body">
                     <div class="card-header container">
                         <div class="row items-center">
-                            <div class="col-12 col-md-8">
+                            <div class="col-12 col-md-6">
                                 @if ($title)
                                     <span class="decent">{{ $title }}</span>
                                 @else
@@ -71,11 +71,22 @@
                                     @endif
                                 @endif
                             </div>
-                            @if($this->hasLiveFilter('controls.set_view_mode'))
-                                <div class="col-12 col-md-4">
-                                    @include('form::components.form.select_view_mode')
+                            <div class="col-12 col-md-6">
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="text-end col">
+                                            @if($this->hasLiveCommand('controls.reload'))
+                                                @include('form::components.form.reload')
+                                            @endif
+                                        </div>
+                                        <div class="col">
+                                            @if($this->hasLiveCommand('controls.set_view_mode'))
+                                                @include('form::components.form.select_view_mode')
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
-                            @endif
+                            </div>
                         </div>
 
                     </div>

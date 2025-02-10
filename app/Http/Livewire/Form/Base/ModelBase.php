@@ -118,15 +118,24 @@ class ModelBase extends NativeObjectBase
             // format to id array
             $form->runObjectRelationsRootProperties($this->dataTransfer, function ($propertyKey, $dataInItems) use ($modelLoaded) {
 
-                if (method_exists($modelLoaded->$propertyKey(), 'sync') || (method_exists($modelLoaded->$propertyKey(), 'saveMany'))) {
+                // In general, we need sync only.
+                // No need for saveMany() because we want exactly what we selected in datatables.
+                if ($hasSync = method_exists($modelLoaded->$propertyKey(), 'sync')) { // || ($hasSaveMany = method_exists($modelLoaded->$propertyKey(), 'saveMany'))) {
 
                     $idArray = [];
                     // each relation like 'mediaItems'
                     foreach ($this->dataTransfer[$propertyKey] as $v) {
-                        if (is_array($v) && isset($v['id'])) {
-                            $idArray[] = $v['id']; // @todo: resolve id
+                        if (is_array($v)) {
+                            if ($hasSync && isset($v['id'])) {
+                                // use ids only
+                                $idArray[] = $v['id']; // @todo: resolve id
+                            } elseif ($hasSaveMany ?? false) {
+                                // use whole object
+                                $idArray[] = $v;
+                            }
                         }
                     }
+
                     $this->dataTransfer[$propertyKey] = $idArray;
 
                 }
@@ -222,6 +231,8 @@ class ModelBase extends NativeObjectBase
     }
 
     /**
+     * Livewire event when updating relations (sub datatable checkbox)
+     *
      * @param  string  $relationPath
      * @param  array   $values
      * @param  bool    $skipRender

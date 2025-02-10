@@ -327,10 +327,10 @@ class ModelBase extends NativeObjectBase
             // but we need camelCase for relations like defined in Model Form class
             $propertyKey = Str::camel($propertyKey);
 
-            if (method_exists($objectInstance, $propertyKey)) { // relation vorhanden ...
+            if (method_exists($objectInstance, $propertyKey)) { // relation exists ...
 
                 // sync() = BelongsToMany()
-                if (method_exists($objectInstance->$propertyKey(), 'sync')) { // ... und kann sync() verwenden ?
+                if (method_exists($objectInstance->$propertyKey(), 'sync')) { // ... and can use sync()?
                     try {
 
                         if (is_array($dataInItems)) {
@@ -406,6 +406,9 @@ class ModelBase extends NativeObjectBase
         if (!method_exists($model->$propertyKey(), 'saveMany')) {
             return false;
         }
+
+        // I want to know if it's still possible to be here ...
+        Log::info(__METHOD__);
 
         $existingIds = [];
         if ($model->$propertyKey) {

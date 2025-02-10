@@ -32,6 +32,11 @@
         $_liveWireAttr = 'wire:click="'.$livewire.'.'.$name.'"';
     }
 @endphp
-<div class="form-group form-label-group {{ $css_group }}">
-    @include('form::components.form.button-alone')
-</div>
+<button class="form-control {{ $css_classes }}"
+        name="{{ $name }}"
+        type="button"
+        @if($disabled) disabled="disabled" @endif
+        @if($read_only) read_only @endif
+        @if($_liveWireAttr) {!! $_liveWireAttr !!} @endif
+        @if($livewire_click) wire:click="{!! $livewire_click !!}" @endif
+>@if(!empty($bs_icon)) <span class="bi bi-{{ $bs_icon }}"></span> @endif {{ $label }}</button>

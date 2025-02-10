@@ -56,6 +56,7 @@ class NativeObjectBase
         'label'             => '',
         'label_limit'       => 40,
         'livewire'          => '',
+        'livewire_click'    => '',
         'livewire_live'     => false,
         'livewire_debounce' => 750, // (in ms, but without suffix 'ms' here) only used when livewire_live=true
         'name'              => '',
@@ -445,8 +446,8 @@ class NativeObjectBase
                         if (empty($tabPage['tab'])) {
                             continue;
                         }
-                        $defaultData = $this->defaultTabPageData; // just a copy for the next step
-                        $tabPage = app('system_base')->arrayMergeRecursiveDistinct($defaultData, $tabPage);
+                        //$defaultData = $this->defaultTabPageData; // just a copy for the next step
+                        $tabPage = app('system_base')->arrayMergeRecursiveDistinct($this->defaultTabPageData, $tabPage);
                     }
                 }
             }

@@ -7,10 +7,8 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\WithFileUploads;
@@ -20,11 +18,8 @@ use Modules\SystemBase\app\Models\JsonViewResponse;
 
 class NativeObjectBase extends BaseComponent
 {
-    use WithFileUploads;
+    use WithFileUploads, TraitLiveCommands;
 
-    const int viewModeSimple = 500;
-    const int viewModeDefault = 1000;
-    const int viewModeExtended = 9000;
 
     /**
      * The form is closed by default.
@@ -97,24 +92,6 @@ class NativeObjectBase extends BaseComponent
     public array $dataTransfer = [];
 
     /**
-     * Nested assoc array of elements updated by livewire updating().
-     * This will be used to control the form like switch a mode or something.
-     * Values will also be saved in session separated by form name.
-     * Names of form elements if input will prefix with 'liveFilters.xxx.yyy'
-     *
-     * @var array|string[]
-     */
-    public array $liveFilters = [];
-
-    /**
-     * additional data for liveFilters
-     *
-     *
-     * @var array
-     */
-    public array $liveFiltersConfig = [];
-
-    /**
      * If given, it's the related datatable where this form is used to edit their items.
      * Used to refresh the related datatable after edited this form.
      *
@@ -171,62 +148,13 @@ class NativeObjectBase extends BaseComponent
     {
         parent::initMount();
 
-        $this->initLiveFilters();
+        $this->initLiveCommands();
 
         /**
          * @internal If place it in boot or hydrate, we get js console error "Uncaught Component not found: xxx"
          * and nothing is working anymore. So mount can be the only valid place.
          */
         $this->reopenFormIfNeeded();
-    }
-
-    /**
-     * @return void
-     */
-    protected function initLiveFilters(): void
-    {
-    }
-
-    /**
-     * @param  string  $suffixKey
-     *
-     * @return string
-     */
-    protected function getLiveFiltersSessionFullKey(string $suffixKey): string
-    {
-        return 'form.'.$this->getName().'.liveFilters.'.$suffixKey;
-    }
-
-    /**
-     * @param  string      $suffixKey
-     * @param  mixed|null  $default
-     *
-     * @return mixed
-     */
-    protected function getLiveFiltersSession(string $suffixKey, mixed $default = null): mixed
-    {
-        return Session::get($this->getLiveFiltersSessionFullKey($suffixKey), $default);
-    }
-
-    /**
-     * @param  string  $suffixKey
-     * @param  mixed   $value
-     *
-     * @return void
-     */
-    protected function setLiveFiltersSession(string $suffixKey, mixed $value): void
-    {
-        Session::put($this->getLiveFiltersSessionFullKey($suffixKey), $value);
-    }
-
-    /**
-     * @param  string  $suffixKey
-     *
-     * @return void
-     */
-    protected function forgetLiveFiltersSession(string $suffixKey): void
-    {
-        Session::forget($this->getLiveFiltersSessionFullKey($suffixKey));
     }
 
     /**
@@ -273,25 +201,17 @@ class NativeObjectBase extends BaseComponent
     }
 
     /**
-     * the updating process used for all liveFilters
+     * the updating process used for all liveCommands
      *
      * @param $property
      * @param $value
      *
      * @return void
      */
+    #[On('updating')]
     public function updating($property, $value): void
     {
-        $propertyPrepared = Str::chopStart($property, 'liveFilters.');
-        if (Arr::has($this->liveFilters, $propertyPrepared)) {
-            $this->setLiveFilter($propertyPrepared, $value);
-
-            // reload is for store switches for example
-            $reload = data_get($this->liveFiltersConfig, $propertyPrepared.'.reload', false);
-
-            // reopen ...
-            $this->reopenFormIfNeeded($reload); // true is important to reload all values!
-        }
+        $this->liveCommandsUpdating($property, $value);
     }
 
     /**
@@ -514,7 +434,7 @@ class NativeObjectBase extends BaseComponent
     #[On('open-form')]
     public function openForm(mixed $id, bool $forceReset = true): void
     {
-        if ($forceReset || !$id) {
+        if ($forceReset) {
             // completely destroy data from old form ...
             $this->resetFormRelevantData();
         }
@@ -717,77 +637,4 @@ class NativeObjectBase extends BaseComponent
         return true;
     }
 
-    /**
-     * @return void
-     */
-    protected function addViewModeFilter(): void
-    {
-        $key = 'controls.set_view_mode';
-        // Use session if exists. Otherwise, use a default.
-        $v = (int) $this->getLiveFiltersSession($key, NativeObjectBase::viewModeDefault);
-        $this->setLiveFilter($key, $v, false);
-    }
-
-    /**
-     * @param  int  $atLeast
-     *
-     * @return bool
-     */
-    public function viewModeAtLeast(int $atLeast = self::viewModeDefault): bool
-    {
-        return data_get($this->liveFilters, 'controls.set_view_mode', self::viewModeDefault) >= $atLeast;
-    }
-
-    /**
-     * @param  int  $atMax
-     *
-     * @return bool
-     */
-    public function viewModeAtMaximum(int $atMax = self::viewModeDefault): bool
-    {
-        return data_get($this->liveFilters, 'controls.set_view_mode', self::viewModeDefault) <= $atMax;
-    }
-
-    /**
-     * Set the liveFilter value and update the session.
-     * Use $reload true|false in your initLiveFilters() to decide how the for will update all data,
-     * but let it free if you just update the value like from updating()
-     *
-     * @param  string     $propertyPrepared
-     * @param  mixed      $value
-     * @param  bool|null  $reload  set this explicit in your initLiveFilters()
-     *
-     * @return void
-     */
-    protected function setLiveFilter(string $propertyPrepared, mixed $value, ?bool $reload = null): void
-    {
-        data_set($this->liveFilters, $propertyPrepared, $value);
-        if ($reload !== null) {
-            data_set($this->liveFiltersConfig, $propertyPrepared.'.reload', $reload);
-        }
-
-        // Also update session for this form type ...
-        $this->setLiveFiltersSession($propertyPrepared, $value);
-    }
-
-    /**
-     * @param  string      $propertyPrepared
-     * @param  mixed|null  $default
-     *
-     * @return mixed
-     */
-    protected function getLiveFilter(string $propertyPrepared, mixed $default = null): mixed
-    {
-        return data_get($this->liveFilters, $propertyPrepared, $default);
-    }
-
-    /**
-     * @param  string      $propertyPrepared
-     *
-     * @return bool
-     */
-    protected function hasLiveFilter(string $propertyPrepared): bool
-    {
-        return Arr::has($this->liveFilters, $propertyPrepared);
-    }
 }

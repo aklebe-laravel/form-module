@@ -10,7 +10,7 @@
             NativeObjectBase::viewModeExtended => __('Extended'),
         ],
         'name' => 'controls.set_view_mode',
-        'livewire' => 'liveFilters',
+        'livewire' => 'liveCommands',
         'livewire_live' => true,
         'livewire_debounce' => 200,
     ]);
