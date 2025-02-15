@@ -3,6 +3,7 @@
 namespace Modules\Form\app\Providers;
 
 use Modules\Form\app\Console\MakeForm;
+use Modules\Form\app\Services\FormService;
 use Modules\SystemBase\app\Providers\Base\ModuleBaseServiceProvider;
 
 class FormServiceProvider extends ModuleBaseServiceProvider
@@ -39,6 +40,8 @@ class FormServiceProvider extends ModuleBaseServiceProvider
     public function register(): void
     {
         parent::register();
+
+        $this->app->singleton(FormService::class);
 
         $this->app->register(RouteServiceProvider::class);
         $this->app->register(EventServiceProvider::class);

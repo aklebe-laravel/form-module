@@ -218,7 +218,8 @@ class ModelBase extends NativeObjectBase
                     $updateResult['created'] = $objectInstance->getKey();
                 }
             } catch (Exception $exception) {
-                $jsonResponse->setErrorMessage($exception->getMessage());
+                $jsonResponse->setErrorMessage(__('Failed to save.'));
+                Log::error($exception->getMessage());
             }
 
 
@@ -245,7 +246,8 @@ class ModelBase extends NativeObjectBase
                         $updateResult['updated'] = $objectInstance->getKey();
                     }
                 } catch (Exception $exception) {
-                    $jsonResponse->setErrorMessage($exception->getMessage());
+                    $jsonResponse->setErrorMessage(__('Failed to update.'));
+                    Log::error($exception->getMessage());
                 }
             }
         }
@@ -587,7 +589,7 @@ class ModelBase extends NativeObjectBase
         $parentName = data_get($parentOptions, 'name', '');
 
         // first fill default values
-        $viewData = $this->defaultViewData;
+        $viewData = static::defaultViewData;
 
         // adjust some special cases ...
         if ($element == 'multi_select') {

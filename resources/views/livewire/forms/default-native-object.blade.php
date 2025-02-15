@@ -1,7 +1,11 @@
 @php
     use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+    use Modules\Form\app\Services\FormService;
 
     /** @var NativeObjectBase $this */
+
+    /** @var FormService $formService */
+    $formService = app(FormService::class);
 
     $_formErrors = $_formErrors ?? [];
     if (!($editForm = $this->getFormResult())) {
@@ -26,7 +30,7 @@
     }
     $title = data_get($editForm, 'additional.final_form_elements.title');
 @endphp
-<div>
+<div class="form-container">
     <!-- Loading Overlay -->
     <div wire:loading.delay>
         @include('form::components.loading-overlay')
@@ -81,7 +85,7 @@
                                         </div>
                                         <div class="col">
                                             @if($this->hasLiveCommand('controls.set_view_mode'))
-                                                @include('form::components.form.select_view_mode')
+                                                @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(\Modules\Form\app\Forms\Base\NativeObjectBase::defaultViewData, $formService::getFormElementFormViewMode()))
                                             @endif
                                         </div>
                                     </div>

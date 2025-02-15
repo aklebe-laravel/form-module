@@ -3,6 +3,7 @@
 namespace Modules\Form\app\Forms\Base;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -11,6 +12,7 @@ use Modules\Acl\app\Models\AclResource;
 use Modules\Acl\app\Services\UserService;
 use Modules\Form\app\Events\BeforeRenderForm;
 use Modules\Form\app\Events\FinalFormElements;
+use Modules\Form\app\Events\InitFormElements;
 use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 use Modules\SystemBase\app\Models\JsonViewResponse;
 
@@ -41,7 +43,7 @@ class NativeObjectBase
      *
      * @var array
      */
-    public array $defaultViewData = [
+    const array defaultViewData = [
         'auto_complete'     => true,
         'css_classes'       => '',
         'css_group'         => '',
@@ -141,6 +143,14 @@ class NativeObjectBase
     private array $finalFormElements = [];
 
     /**
+     *
+     */
+    public function __construct()
+    {
+        InitFormElements::dispatch($this);
+    }
+
+    /**
      * @return JsonResource|null
      */
     public function getDataSource(): ?JsonResource
@@ -235,11 +245,11 @@ class NativeObjectBase
             // correct key if needed
             $key = $this->getElementName($formElement, $key);
 
-            // Check for select relations with value 'No choice'
-            // @todo: not only 'select' are select fields! Also check all other select elements!
-            if (data_get($formElement, 'html_element') === 'select') {
-                // Do not use === to comparing selectValueNoChoice!
-                if (data_get($data, $key, '') == app('system_base')::selectValueNoChoice) {
+            // Check for select relations with value 'No choice'.
+            // Checking 'select' is not enough, so we will check options contains the no choice key ...
+            $keyNoChoice = app('system_base')::selectValueNoChoice;
+            if (Arr::has($formElement, 'options.'.$keyNoChoice)) {
+                if (data_get($data, $key, '') == $keyNoChoice) {
                     $data[$key] = null;
                 }
             }
@@ -341,6 +351,7 @@ class NativeObjectBase
 
             $jsonResponse->setErrorMessage(__('validation.failed'));
             Log::info("Validator error. Remove validator property in form fields, if no validation is required.");
+            Log::info("Validator error messages", $properValidatorMessages);
             $jsonResponse->addMessagesToErrorList($properValidatorMessages);
         } else {
             $validated = $validator->validated();
@@ -648,7 +659,7 @@ class NativeObjectBase
         $parentName = data_get($parentOptions, 'name', '');
 
         // first fill default values
-        $viewData = $this->defaultViewData;
+        $viewData = static::defaultViewData;
 
         // adjust some special cases ...
         if ($element == 'multi_select') {
@@ -842,9 +853,11 @@ class NativeObjectBase
     /**
      * try to get the user id related to this object.
      *
+     * @param  bool  $canAuthId
+     *
      * @return mixed
      */
-    public function getOwnerUserId(): mixed
+    public function getOwnerUserId(bool $canAuthId = true): mixed
     {
         // 1) Autodetect: Check whether there is an existing user_id ...
         if ($this->getDataSource() && data_get($this->getDataSource(), 'user_id')) {
@@ -858,7 +871,7 @@ class NativeObjectBase
         }
 
         // 3) Try to get user_id by assigned default values
-        return data_get($this->formLivewire->objectInstanceDefaultValues, 'user_id', 0);
+        return data_get($this->formLivewire->objectInstanceDefaultValues, 'user_id', $canAuthId ? Auth::id() : 0);
     }
 
     /**
