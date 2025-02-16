@@ -295,9 +295,9 @@ class NativeObjectBase extends BaseComponent
             return $this->_form;
         }
 
-        if ($modelName = app('system_base')->findModuleClass($formName ?: $this->getFormName(), 'model-forms')) {
+        if ($appFormName = app('system_base')->findModuleClass($formName ?: $this->getFormName(), 'app-forms')) {
             try {
-                $this->_form = App::make($modelName);
+                $this->_form = App::make($appFormName);
 
                 // assign this as livewire form
                 $this->_form->formLivewire = $this;
