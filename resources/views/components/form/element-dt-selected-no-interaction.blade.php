@@ -1,9 +1,8 @@
 @php
     use Illuminate\Database\Eloquent\Collection;
-    use Modules\DataTable\app\Http\Livewire\DataTable\Base\BaseDataTable;
-    use Modules\Form\app\Forms\Base\NativeObjectBase;
     use Modules\SystemBase\app\Services\LivewireService;
     use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
+    use Modules\DataTable\app\Http\Livewire\DataTable\Base\BaseDataTable;
 
     /**
     * @var string $name name attribute
@@ -17,7 +16,6 @@
     * @var array $html_data data attributes
     * @var array $x_data
     * @var string $modelName
-    * @var NativeObjectBase $form_instance
      * @var NativeObjectBaseLivewire $form_livewire
     */
 

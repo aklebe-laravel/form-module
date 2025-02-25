@@ -5,8 +5,8 @@
     /**
      * @var NativeObjectBase $this
      * @var Model $editFormModelObject
-     * @var string $acceptLabel
+     * @var string $buttonLabel
      */
-    $acceptLabel = __('Email Password Reset Link');
+    $buttonLabel = __('Email Password Reset Link');
 @endphp
 @include('form::components.form.actions.defaults.accept')

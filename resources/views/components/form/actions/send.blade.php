@@ -5,8 +5,8 @@
     /**
      * @var NativeObjectBase $this
      * @var Model $editFormModelObject
-     * @var string $acceptLabel
+     * @var string $buttonLabel
      */
-    $acceptLabel = __('Send');
+    $buttonLabel = __('Send');
 @endphp
 @include('form::components.form.actions.defaults.accept')

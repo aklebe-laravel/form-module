@@ -1,12 +1,10 @@
 @php
-    use Modules\Form\app\Forms\Base\NativeObjectBase;
     use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
 
     /**
      * @var string    $title
      * @var array     $tab_controls
      * @var string    $livewire
-     * @var NativeObjectBase $form_instance
      * @var NativeObjectBaseLivewire $form_livewire
      **/
 @endphp
@@ -15,7 +13,7 @@
         @foreach($tab_controls as $tabControlName => $tabControl)
             @php
                 $tabControlName = uniqid('tc'); // @todo: unconditionally?
-                $tabControl = $form_instance->prepareFormViewData('tab_control', $tabControlName, $tabControl, get_defined_vars());
+                $tabControl = $form_livewire->prepareFormViewData('tab_control', $tabControlName, $tabControl, get_defined_vars());
                 $tabControlPages = collect($tabControl['tab_pages'])->where('visible', true);
                 $tabControlPagesCount = $tabControlPages->count();
             @endphp
@@ -27,7 +25,7 @@
                     $tabPage['tabPageIndex'] = 0;
                     $tabPage['tabControlName'] = $tabControlName;
                 @endphp
-                {!! $form_instance->renderElement('tab_content', '', $tabPage, $tabControl) !!}
+                {!! $form_livewire->renderElement('tab_content', '', $tabPage, $tabControl) !!}
             @else
                 <ul class="nav nav-tabs flex-column flex-md-row" id="{{ uniqid('tab_list_') }}" role="tablist">
                     @php $tabPageIndex = 0; @endphp
@@ -39,7 +37,7 @@
                             $tabPage['tabPageIndex'] = $tabPageIndex;
                             $tabPage['tabControlName'] = $tabControlName;
                         @endphp
-                        {!! $form_instance->renderElement('tab_button', $tabPageName, $tabPage, $tabControl) !!}
+                        {!! $form_livewire->renderElement('tab_button', $tabPageName, $tabPage, $tabControl) !!}
                         @php $tabPageIndex++; @endphp
                     @endforeach
                 </ul>
@@ -53,7 +51,7 @@
                             $tabPage['tabPageIndex'] = $tabPageIndex;
                             $tabPage['tabControlName'] = $tabControlName;
                         @endphp
-                        {!! $form_instance->renderElement('tab_content', $tabPageName, $tabPage, $tabControl) !!}
+                        {!! $form_livewire->renderElement('tab_content', $tabPageName, $tabPage, $tabControl) !!}
                         @php $tabPageIndex++; @endphp
                     @endforeach
                 </div>

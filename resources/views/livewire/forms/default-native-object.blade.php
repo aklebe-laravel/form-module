@@ -85,7 +85,7 @@
                                         </div>
                                         <div class="col">
                                             @if($this->hasLiveCommand('controls.set_view_mode'))
-                                                @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(\Modules\Form\app\Forms\Base\NativeObjectBase::defaultViewData, $formService::getFormElementFormViewMode()))
+                                                @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(static::defaultViewData, $formService::getFormElementFormViewMode()))
                                             @endif
                                         </div>
                                     </div>

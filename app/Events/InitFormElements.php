@@ -5,7 +5,7 @@ namespace Modules\Form\app\Events;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Modules\Form\app\Forms\Base\NativeObjectBase;
+use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
 
 class InitFormElements
 {

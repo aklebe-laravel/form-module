@@ -5,7 +5,7 @@
     /**
      * @var NativeObjectBase $this
      * @var Model $editFormModelObject
-     * @var string $acceptLabel
+     * @var string $buttonLabel
      */
 
     $itemId = $this->formObjectId;
@@ -20,8 +20,9 @@
 @endphp
 @if ($itemId)
     @include('form::components.form.actions.defaults.default-button',[
-        'buttonLabel' => $acceptLabel ?? __("Delete"),
-        'buttonClick' => "messageBox.show('__default__.data-table.delete', ".json_encode($messageBoxParamsDelete).")",
+        'buttonType' => 'alpine',
+        'buttonLabel' => $buttonLabel ?? __("Delete"),
+        'buttonClick' => "messageBox.show('__default__.form.delete', ".json_encode($messageBoxParamsDelete).")",
         'buttonCss' => 'btn-danger form-action-delete',
     ])
 @endif

@@ -5,11 +5,11 @@
     /**
      * @var NativeObjectBase $this
      * @var Model $editFormModelObject
-     * @var string $acceptLabel
+     * @var string $buttonLabel
      */
 @endphp
 @include('form::components.form.actions.defaults.default-button',[
-    'buttonLabel' => $acceptLabel ?? __("Accept"),
+    'buttonLabel' => $buttonLabel ?? __("Accept"),
     'buttonClick' => $this->getDefaultWireFormAccept(),
     'buttonCss' => 'btn-primary form-action-accept',
 ])

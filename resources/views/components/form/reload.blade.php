@@ -1,6 +1,6 @@
 @php
-    use Modules\Form\app\Forms\Base\NativeObjectBase;
     use Modules\Form\app\Http\Livewire\Form\Base\ModelBase;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
 
     /** @var ModelBase $this */
     $_v = array_merge(NativeObjectBase::defaultViewData, [
