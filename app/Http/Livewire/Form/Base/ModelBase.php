@@ -123,7 +123,7 @@ class ModelBase extends NativeObjectBase
     #[On('duplicate-and-open-form')]
     public function duplicateAndOpenForm(string|int $id): void
     {
-        if ($item = app('system_base')->getEloquentModelBuilder($this->getObjectEloquentModelName())->whereKey($id)->first()) {
+        if ($item = app('system_base')->getEloquentModelBuilder(app('system_base')->getSimpleClassName($this->getObjectEloquentModelName()))->whereKey($id)->first()) {
 
             $methodReplicateRelations = 'replicateWithRelations';
             if (method_exists($item, $methodReplicateRelations)) {
