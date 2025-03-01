@@ -80,6 +80,10 @@ class ModelBase extends NativeObjectBase
                 // parent id (the id from parent form if form in form)
                 // @todo: find a better place?
                 $x->relatedPivotModelId = data_get($this->parentData, 'id'); // parent id or null
+            } else {
+                // Not found error or 404 ...
+                $this->addErrorMessage(__(':name not found.', ['name' => __($this->objectFrontendLabel)]));
+                $this->closeForm();
             }
             $this->setDataSource(new JsonResource($x ?? $this->getObjectEloquentModel()));
 
