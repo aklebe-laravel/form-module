@@ -197,6 +197,14 @@ trait TraitLiveCommands
     }
 
     /**
+     * @return bool
+     */
+    protected function hasLiveCommands(): bool
+    {
+        return !!$this->liveCommands;
+    }
+
+    /**
      * @param  string  $propertyPrepared
      * @param  array   $config
      *

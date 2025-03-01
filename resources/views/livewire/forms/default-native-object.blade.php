@@ -29,8 +29,9 @@
         $description = nl2br(trim($description));
     }
     $title = data_get($editForm, 'additional.final_form_elements.title');
+    $formShortId = app('system_base')->getSimpleClassName($this::class);
 @endphp
-<div class="form-container">
+<div class="form-container dt-form-type-{{ $formShortId }}">
     <!-- Loading Overlay -->
     <div wire:loading.delay>
         @include('form::components.loading-overlay')
@@ -61,12 +62,12 @@
                 <div class="card-body">
                     <div class="card-header container">
                         <div class="row items-center">
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 @if($this->hasLiveCommands()) col-md-6 @endif">
                                 @if ($title)
                                     <span class="decent">{{ $title }}</span>
                                 @else
                                     @if(($editFormModelObject ?? null) && $editFormModelObject->id)
-                                        <span class="decent">{{ __($this->getEloquentModelName()) }}</span>
+                                        <span class="decent">{{ __('???') }}</span>
                                         @if($readonly)
                                             - <span class="decent">{{ __("ID") }}: {{ $editFormModelObject->id }}</span>
                                         @endif
@@ -75,22 +76,24 @@
                                     @endif
                                 @endif
                             </div>
-                            <div class="col-12 col-md-6">
-                                <div class="container">
-                                    <div class="row">
-                                        <div class="text-end col">
-                                            @if($this->hasLiveCommand('controls.reload'))
-                                                @include('form::components.form.reload')
-                                            @endif
-                                        </div>
-                                        <div class="col">
-                                            @if($this->hasLiveCommand('controls.set_view_mode'))
-                                                @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(static::defaultViewData, $formService::getFormElementFormViewMode()))
-                                            @endif
+                            @if($this->hasLiveCommands())
+                                <div class="col-12 col-md-6">
+                                    <div class="container">
+                                        <div class="row">
+                                            <div class="text-end col">
+                                                @if($this->hasLiveCommand('controls.reload'))
+                                                    @include('form::components.form.reload')
+                                                @endif
+                                            </div>
+                                            <div class="col">
+                                                @if($this->hasLiveCommand('controls.set_view_mode'))
+                                                    @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(static::defaultViewData, $formService::getFormElementFormViewMode()))
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         </div>
 
                     </div>

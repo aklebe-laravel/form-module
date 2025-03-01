@@ -950,7 +950,9 @@ class ModelBase extends NativeObjectBase
     protected function makeFormTitle(?JsonResource $dataSource, string $displayKey): string
     {
         /** @var JsonResource|Model|null $dataSource */
-        if ($dataSource && $dataSource->getKey()) {
+        if (!$this->canEdit()) {
+            $result = sprintf(__("Show %s: %s"), __($this->objectFrontendLabel), $dataSource->$displayKey);
+        } elseif ($dataSource && $dataSource->getKey()) {
             $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel), $dataSource->$displayKey);
         } else {
             $result = sprintf(__("Create %s"), __($this->objectFrontendLabel));
