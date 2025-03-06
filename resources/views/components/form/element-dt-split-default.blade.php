@@ -1,38 +1,30 @@
 @php
-    use Illuminate\Database\Eloquent\Collection;
     use Modules\SystemBase\app\Services\LivewireService;
-    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+    use Illuminate\Http\Resources\Json\JsonResource;
 
     /**
-    * @var string $name name attribute
-    * @var string $label
-    * @var Collection $value
-    * @var bool $read_only
-    * @var string $description
-    * @var string $css_classes
-    * @var string $x_model optional for alpine.js
-    * @var string $xModelName
-    * @var array $html_data data attributes
-    * @var array $x_data
-    * @var string $modelName
-    * @var NativeObjectBaseLivewire $form_livewire
-    */
+     * @var NativeObjectBase $form_instance
+     * @var array $data
+     */
 
+    /* @var JsonResource $object */
+    $object = $form_instance->getDataSource();
     $parentData = [
        'id' => $object->id ?? null,
        'model_class' => is_object($object->resource) ? get_class($object->resource) : null,
     ];
 
-    $livewireTable = $options['table'] ?? '';
-    $livewireTableOptions = $options['table_options'] ?? [];
+    $livewireTable = $data['options']['table'] ?? '';
+    $livewireTableOptions = $data['options']['table_options'] ?? [];
     $livewireTableOptions['parentData'] = $parentData;
-    $livewireTableKey = LivewireService::getKey($livewireTable . '-' . $name);
+    $livewireTableKey = LivewireService::getKey($livewireTable . '-' . $data['name']);
 @endphp
 <div>
     {{--  @todo: Browser console error if no key used: Uncaught (in promise) TypeError: initialData is null  --}}
     @livewire($livewireTable, array_merge([
-        'parentRelationMethodForThisBuilder' => $name,
-        'selectedItems' => $value ? $value->pluck('id')->toArray() : [],
-        'selectable' => !$disabled,
+        'parentRelationMethodForThisBuilder' => $data['name'],
+        'selectedItems' => $data['value'] ? $data['value']->pluck('id')->toArray() : [],
+        'selectable' => !$data['disabled'],
     ], $livewireTableOptions), key($livewireTableKey))
 </div>

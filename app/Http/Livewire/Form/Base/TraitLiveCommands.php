@@ -3,9 +3,9 @@
 namespace Modules\Form\app\Http\Livewire\Form\Base;
 
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use Modules\Form\app\Services\FormService;
 
 trait TraitLiveCommands
 {
@@ -17,8 +17,10 @@ trait TraitLiveCommands
      * defaults for $this->liveCommandsConfig
      */
     const array liveFilterConfigDefaults = [
-        'reload'  => false,
-        'default' => null,
+        'reload'      => false,
+        'default'     => null,
+        'view'        => null,
+        'view_params' => [],
     ];
 
     /**
@@ -119,10 +121,15 @@ trait TraitLiveCommands
      */
     protected function addViewModeCommand(int $default = self::viewModeDefault): void
     {
-        $key = 'controls.set_view_mode';
+        /** @var FormService $formService */
+        $formService = app(FormService::class);
+
+        $key = 'controls_set_view_mode';
         $config = [
-            'reload'  => false,
-            'default' => $default,
+            'reload'      => false,
+            'default'     => $default,
+            'view'        => 'form::components.form.select',
+            'view_params' => $formService::getFormElementFormViewMode(),
         ];
         $this->initLiveCommand($key, $config);
     }
@@ -132,9 +139,10 @@ trait TraitLiveCommands
      */
     protected function addReloadCommand(): void
     {
-        $key = 'controls.reload';
+        $key = 'controls_reload';
         $config = [
             'reload' => true, // that's the only task of this button
+            'view'   => 'form::components.form.reload',
         ];
         $this->initLiveCommand($key, $config);
     }
@@ -146,7 +154,7 @@ trait TraitLiveCommands
      */
     public function viewModeAtLeast(int $atLeast = self::viewModeDefault): bool
     {
-        return data_get($this->liveCommands, 'controls.set_view_mode', self::viewModeDefault) >= $atLeast;
+        return data_get($this->liveCommands, 'controls_set_view_mode', self::viewModeDefault) >= $atLeast;
     }
 
     /**
@@ -156,7 +164,7 @@ trait TraitLiveCommands
      */
     public function viewModeAtMaximum(int $atMax = self::viewModeDefault): bool
     {
-        return data_get($this->liveCommands, 'controls.set_view_mode', self::viewModeDefault) <= $atMax;
+        return data_get($this->liveCommands, 'controls_set_view_mode', self::viewModeDefault) <= $atMax;
     }
 
     /**

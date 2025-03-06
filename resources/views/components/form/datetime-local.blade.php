@@ -1,6 +1,4 @@
-@include('form::components.form.text', [
-    'type' => 'datetime-local',
-     // 'html_data' => [
-     //    'format' => 'YYYY-mm-dd'
-     //]
-])
+@php
+    $data['html_element'] = $data['type'] = 'datetime-local';
+@endphp
+@include('form::components.form.text')

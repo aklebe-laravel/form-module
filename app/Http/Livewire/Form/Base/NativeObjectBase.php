@@ -2,6 +2,7 @@
 
 namespace Modules\Form\app\Http\Livewire\Form\Base;
 
+use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
@@ -138,9 +139,8 @@ class NativeObjectBase extends BaseComponent
     protected ?JsonResource $_formResult = null;
 
     /**
-     * if true adding
-     * x-data="{form_data:$wire.dataTransfer}"
-     * to form
+     * if true adding: x-data="{form_data:$wire.dataTransfer}" to form
+     * This is not needed in general, $wire.xxx will update by js instantly
      *
      * @var bool
      */
@@ -986,7 +986,7 @@ class NativeObjectBase extends BaseComponent
      *
      * @return array
      */
-    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = []): array
+    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = [], ?Closure $callbackExtraValidate = null, ?Closure $callbackTransformValue = null): array
     {
         $parentName = data_get($parentOptions, 'name', '');
 
@@ -1000,15 +1000,11 @@ class NativeObjectBase extends BaseComponent
 
         // merge/inherit parent data
         if ($parentOptions) {
-            // @todo: why is arrayCopyWhitelisted() not enough?
             //$viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $parentOptions);
-            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData,
-                $parentOptions,
-                $this->inheritViewData);
+            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData, $parentOptions, $this->inheritViewData);
         }
 
         // merge/inherit current data
-        // @todo: why is arrayCopyWhitelisted() not enough?
         $viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $options);
 
         /**
@@ -1022,8 +1018,20 @@ class NativeObjectBase extends BaseComponent
         $name = $this->getElementName($viewData, $name);
         $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
 
+        // extra validation callback
+        if ($callbackExtraValidate && !$callbackExtraValidate($name)) {
+            return $viewData;
+        }
+
         //
-        $resourcePrevValue = data_get($this->getDataSource(), $name);
+        $resourcePrevValue = data_get($this->getDataSource()->resource, $name);
+
+        // assign default if not explicit set in viewData
+        if ((!Arr::has($options, 'default')) && Arr::has($this->objectInstanceDefaultValues, $name)) {
+            $viewData['default'] = data_get($this->objectInstanceDefaultValues, $name);
+            //data_set($viewData, 'html_data.default', $viewData['default']);
+            //Log::debug("default1", [$name, $viewData['default'], __METHOD__]);
+        }
 
         /**
          * get value by (first given wins)
@@ -1031,9 +1039,18 @@ class NativeObjectBase extends BaseComponent
          * 2) from dataSource (if not null)
          * 3) from field viewData['default']
          *
-         * @todo: point 3 is questionable especially if value is false, maybe remove 'default' this way
+         * @todo : point 3 is questionable especially if value is false, maybe remove 'default' this way
+         * @fixed: overwritten null wich was needed
          */
-        $value = data_get($viewData, 'value') ?: $resourcePrevValue ?? data_get($viewData, 'default', '');
+        $value = data_get($viewData, 'value') ?: $resourcePrevValue;
+        if (!$value && ($default = data_get($viewData, 'default', ''))) {
+            $value = $default;
+        }
+
+        // value transform callback
+        if ($callbackTransformValue) {
+            $value = $callbackTransformValue($name, $value);
+        }
 
         // set calculated values for blade templates
         $viewData['value'] = $value ?? '';
@@ -1326,7 +1343,12 @@ class NativeObjectBase extends BaseComponent
      */
     protected function getElementName(array $elementConfigData, string $default): string
     {
-        return data_get($elementConfigData, 'name') ?: data_get($elementConfigData, 'property') ?: $default;
+        if (!$name = data_get($elementConfigData, 'name')) {
+            $name = data_get($elementConfigData, 'property') ?: $default;
+        }
+
+        //$name = str_replace('-', '_', $name);
+        return $name;
     }
 
     /**
@@ -1351,9 +1373,11 @@ class NativeObjectBase extends BaseComponent
             return '';
         }
 
-        $viewData['form_instance'] = $this;
-        $viewData['form_livewire'] = $this;
-        $viewData['object'] = $this->getDataSource();
+        //$viewData['form_instance'] = $this;
+        //$viewData['form_livewire'] = $this;
+        //$viewData['object'] = $this->getDataSource();
+        //$viewData['is_default_value'] = (data_get($viewData, 'value') == data_get($viewData, 'default'));
+        //$viewData['input_attributes'] = $this->calcInputAttributesString($viewData);
 
         // @deprecated 'html_element_module': use "MyModule::some_element" like above
         // if "html_element_module" given, use this ...
@@ -1373,7 +1397,276 @@ class NativeObjectBase extends BaseComponent
         }
 
         // Render the given element
-        return view($viewPath.'.'.$element, $viewData)->render();
+        return view($viewPath.'.'.$element, ['data' => $viewData, 'form_instance' => $this])->render();
     }
+
+    /**
+     * @param  string  $name
+     * @param  array   $viewData
+     * @param  array   $preparedAttrs
+     *
+     * @return array
+     */
+    protected function getInputAttributesForText(string $name, array $viewData, array $preparedAttrs): array
+    {
+        $_isPassword = (data_get($viewData, 'type') === 'password');
+        //$xModelName = ((data_get($viewData, 'x_model')) ? (data_get($viewData, 'x_model').'.'.$name) : '');
+        //$livewire = data_get($viewData, 'livewire');
+
+        $preparedAttrs['class'] = 'form-control '.data_get($preparedAttrs, 'class');
+        $preparedAttrs['placeholder'] = data_get($viewData, 'label');
+
+        if ($tmp = data_get($viewData, 'type')) {
+            $preparedAttrs['type'] = $tmp;
+        }
+        //if (!$livewire && !$xModelName) {
+        $preparedAttrs['value'] = !$_isPassword ? data_get($viewData, 'value') : '';
+        //}
+        if (!data_get($viewData, 'auto_complete')) {
+            $preparedAttrs['autocomplete'] = $_isPassword ? 'new-password' : 'off';
+        }
+
+        return $preparedAttrs;
+    }
+
+    /**
+     * @param  string  $name
+     * @param  array   $viewData
+     * @param  array   $preparedAttrs
+     *
+     * @return array
+     */
+    protected function getInputAttributesForTextArea(string $name, array $viewData, array $preparedAttrs): array
+    {
+        $preparedAttrs['class'] = 'form-control '.data_get($preparedAttrs, 'class');
+
+        return $preparedAttrs;
+    }
+
+    /**
+     * @param  string  $name
+     * @param  array   $viewData
+     * @param  array   $preparedAttrs
+     *
+     * @return array
+     */
+    protected function getInputAttributesForSelect(string $name, array $viewData, array $preparedAttrs): array
+    {
+        $preparedAttrs['class'] = 'form-select '.data_get($preparedAttrs, 'class');
+        if (data_get($viewData, 'multiple')) {
+            $preparedAttrs['multiple'] = 'multiple';
+            if ($tmp = data_get($viewData, 'list_size', 6)) {
+                $preparedAttrs['size'] = $tmp;
+            }
+        }
+
+        return $preparedAttrs;
+    }
+
+    /**
+     * @param  string  $name
+     * @param  array   $viewData
+     * @param  array   $preparedAttrs
+     *
+     * @return array
+     */
+    protected function getInputAttributesForCheckbox(string $name, array $viewData, array $preparedAttrs): array
+    {
+        $preparedAttrs['type'] = data_get($viewData, 'type') ?? 'checkbox';
+        $preparedAttrs['class'] = 'form-control form-check-input '.data_get($preparedAttrs, 'class');
+
+        $xModelName = ((data_get($viewData, 'x_model')) ? (data_get($viewData, 'x_model').'.'.$name) : '');
+        if (!$xModelName && data_get($viewData, 'value')) {
+            $preparedAttrs['checked'] = 'checked';
+        }
+
+        return $preparedAttrs;
+    }
+
+    /**
+     * @param  array  $viewData
+     *
+     * @return string
+     */
+    public function calcInputAttributesString(array $viewData): string
+    {
+        $html = '';
+        $markerWithoutAttribute = '#[NO_ATTRIBUTE]#';
+        $xModelName = ((data_get($viewData, 'x_model')) ? (data_get($viewData, 'x_model').'.'.data_get($viewData, 'name')) : '');
+        $livewire = data_get($viewData, 'livewire');
+        $name = data_get($viewData, 'name');
+        $default = data_get($viewData, 'default', '');
+        $xClasses = [];
+
+        // ----------------------------------------------
+        // Attributes for all kind of elements ...
+        // ----------------------------------------------
+        $attrs = [
+            'x-init' => '', // at first (maybe not filled below - empty keys will not be rendered)
+            'name'   => $name,
+            'class'  => data_get($viewData, 'css_classes'),
+        ];
+
+        if ($tmp = data_get($viewData, 'id')) {
+            $attrs['id'] = $tmp;
+        }
+        if ($xModelName) {
+            $attrs['x-model'] = $xModelName;
+        }
+
+        if ($livewire) {
+            $wireKey = 'wire:model';
+            $wireFrontendName = $livewire.'.'.$name;
+
+            if (data_get($viewData, 'livewire_live')) {
+                $wireKey .= '.live';
+                // debounce only when livewire_live
+                if ($tmp = data_get($viewData, 'livewire_debounce')) {
+                    $wireKey .= '.debounce.'.$tmp.'ms';
+                }
+            }
+            $attrs[$wireKey] = $wireFrontendName;
+
+            // alpine check defaults
+            if (!in_array(data_get($viewData, 'html_element'), ['hidden', 'password'])) {
+                // In js we need a special check if no default.
+                // In this case we want a 'falsy' check: null, 0 or empty strings.
+                if ($default) {
+                    // alpine check default value
+                    $xClasses['default-value'] = "(getValue(\$wire, '$attrs[$wireKey]', null)=='$default')";
+                } else {
+                    // alpine check default value (empty)
+                    $xClasses['default-value'] = "isValueEmpty(getValue(\$wire, '$attrs[$wireKey]', null))";
+                }
+            }
+
+            //// should be used to check values changed and loaded_values should init somewhere without using $wire.xxx
+            //$xClasses['value-changed'] = "(\$wire.$attrs[$wireKey] != loaded_values.$name)";
+
+            //// testing ....
+            //$attrs['@keyup.shift'] = "console.log(getValue(\$wire, '$attrs[$wireKey]', null)), loaded_values.$name)";
+            //$attrs['@keyup.shift'] = "console.log(getValue(\$wire, 'dataTransfer.name', null))";
+        }
+
+
+        // finally calc :class / $xClasses
+        $attrs[':class'] = $this->getSpecialJsonForJS($xClasses);
+
+        //
+        if (data_get($viewData, 'disabled')) {
+            $attrs['disabled'] = 'disabled';
+        }
+        if (data_get($viewData, 'read_only')) {
+            $attrs['readonly'] = $markerWithoutAttribute;
+        }
+        if ($tmp = data_get($viewData, 'dusk')) {
+            $attrs['dusk'] = $tmp;
+        }
+
+        // direct defined attributes
+        foreach (data_get($viewData, 'attributes', []) as $k => $v) {
+            $attrs[$k] = $v;
+        }
+
+        // data-.... attributes
+        foreach (data_get($viewData, 'html_data', []) as $k => $v) {
+            $attrs['data-'.$k] = $v;
+        }
+
+        // x-.... attributes
+        foreach (data_get($viewData, 'x_data', []) as $k => $v) {
+            $attrs['x-'.$k] = $v;
+        }
+
+        // ----------------------------------------------
+        // Attributes for input text and similar ...
+        // ----------------------------------------------
+        $htmlInputTypes = ['text', 'hidden', 'password', 'email', 'number', 'number_int', 'date', 'datetime-local']; // blades
+        if (in_array(data_get($viewData, 'html_element'), $htmlInputTypes)) {
+            $attrs = $this->getInputAttributesForText($name, $viewData, $attrs);
+        }
+
+        // ----------------------------------------------
+        // Attributes for textarea and similar ...
+        // ----------------------------------------------
+        $htmlInputTypes = ['textarea']; // blades
+        if (in_array(data_get($viewData, 'html_element'), $htmlInputTypes)) {
+            $attrs = $this->getInputAttributesForTextArea($name, $viewData, $attrs);
+        }
+
+        // ----------------------------------------------
+        // Attributes for select ...
+        // ----------------------------------------------
+        $htmlInputTypes = ['checkbox', 'switch']; // blades
+        if (in_array(data_get($viewData, 'html_element'), $htmlInputTypes)) {
+            $attrs = $this->getInputAttributesForCheckbox($name, $viewData, $attrs);
+        }
+
+        // ----------------------------------------------
+        // Attributes for select ...
+        // ----------------------------------------------
+        $htmlInputTypes = ['select', 'multi_select', 'sortable_multi_select']; // blades
+        if (in_array(data_get($viewData, 'html_element'), $htmlInputTypes)) {
+            $attrs = $this->getInputAttributesForSelect($name, $viewData, $attrs);
+        }
+
+        // ----------------------------------------------
+        // build the attribute chain string ...
+        // ----------------------------------------------
+        foreach ($attrs as $attr => $value) {
+            if (!trim($value)) {
+                continue;
+            }
+            if ($value === $markerWithoutAttribute) {
+                $html .= $attr.' ';
+            } else {
+                $html .= $attr.'="'.$value.'" ';
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * Make json like json_encode() but can skip quoting values to make work conditions and function
+     *
+     * @param  array  $arr
+     * @param  bool   $quoteStringValues
+     *
+     * @return string
+     */
+    public function getSpecialJsonForJS(array $arr, bool $quoteStringValues = false): string
+    {
+        $result = '';
+        if ($arr) {
+            // json_encode() not working here because values are functions or conditions, but not strings ...
+            //$attrs[':class'] = str_replace('"', '\'', json_encode($xClasses));
+            $json = '';
+            foreach ($arr as $k => $v) {
+                if ($json) {
+                    $json .= ',';
+                }
+                if ($v === null) {
+                    $v = 'null';
+                }
+                if (is_scalar($v)) {
+                    if (is_bool($v)) {
+                        $v = $v ? 'true' : 'false';
+                    } elseif (is_string($v)) {
+                        if ($quoteStringValues) {
+                            $v = '"'.$v.'"';
+                        }
+                    }
+                } else {
+                    $v = $this->getSpecialJsonForJS($v, $quoteStringValues);
+                }
+                $json .= "'".$k."'".":".$v;
+            }
+            $result = '{'.$json.'}';
+        }
+
+        return $result;
+    }
+
 
 }

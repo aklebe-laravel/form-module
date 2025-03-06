@@ -1,1 +1,1 @@
-<hr class="{{ $css_classes }}" />
+<hr class="{{ $data['css_classes'] }}" />

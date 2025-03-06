@@ -1,8 +1,9 @@
 @php
+    use Modules\Form\app\Http\Livewire\Form\Base\ModelBase;
     use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
     use Modules\Form\app\Services\FormService;
 
-    /** @var NativeObjectBase $this */
+    /** @var NativeObjectBase|ModelBase $this */
 
     /** @var FormService $formService */
     $formService = app(FormService::class);
@@ -30,8 +31,10 @@
     }
     $title = data_get($editForm, 'additional.final_form_elements.title');
     $formShortId = app('system_base')->getSimpleClassName($this::class);
+
+    $simpleModelName = ($this instanceof ModelBase) ? app('system_base')->getSimpleClassName($this->getObjectEloquentModelName()) : null;
 @endphp
-<div class="form-container dt-form-type-{{ $formShortId }}">
+<div class="form-container dt-form-type-{{ $formShortId }}" x-data="getNewForm('{{ $simpleModelName }}')">
     <!-- Loading Overlay -->
     <div wire:loading.delay>
         @include('form::components.loading-overlay')
@@ -53,10 +56,11 @@
         @if($editFormHtml)
             @include('form::inc.form-backdrop')
 
-            <div @if ($this->autoXData) x-data="{form_data:$wire.dataTransfer}" @endif
+            <div
+                    @if ($this->autoXData) x-data="{form_data:$wire.dataTransfer}" @endif
             class="card dt-edit-form {{ ($readonly || !$showFormActions) ? 'readonly' : 'editable' }}"
-                 @if($this->canKeyEnterSendForm)
-                     wire:keydown.enter="{{ $this->getDefaultWireFormAccept() }}"
+                    @if($this->canKeyEnterSendForm)
+                        wire:keydown.enter="{{ $this->getDefaultWireFormAccept() }}"
                     @endif
             >
                 <div class="card-body">
@@ -77,21 +81,12 @@
                                 @endif
                             </div>
                             @if($this->hasLiveCommands())
-                                <div class="col-12 col-md-6">
-                                    <div class="container">
-                                        <div class="row">
-                                            <div class="text-end col">
-                                                @if($this->hasLiveCommand('controls.reload'))
-                                                    @include('form::components.form.reload')
-                                                @endif
-                                            </div>
-                                            <div class="col">
-                                                @if($this->hasLiveCommand('controls.set_view_mode'))
-                                                    @include('form::components.form.select', app('system_base')->arrayMergeRecursiveDistinct(static::defaultViewData, $formService::getFormElementFormViewMode()))
-                                                @endif
-                                            </div>
+                                <div class="col-12 col-md-6 text-end">
+                                    @foreach($this->liveCommandsConfig as $__k => $__v)
+                                        <div class="d-inline-flex">
+                                            @include($__v['view'], ['data' => app('system_base')->arrayMergeRecursiveDistinct(NativeObjectBase::defaultViewData, $__v['view_params']), 'form_instance' => $this])
                                         </div>
-                                    </div>
+                                    @endforeach
                                 </div>
                             @endif
                         </div>

@@ -1,26 +1,20 @@
 @php
-    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase as NativeObjectBaseLivewire;
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
 
     /**
-     * @var string $title
-     * @var string $livewire
-     * @var string $tabControlName
-     * @var string $value
-     * @var integer $element_index
-     * @var integer $tabPageIndex location tab_controls.blade.php
-     * @var NativeObjectBaseLivewire $form_livewire
-     * @var array $content
-     **/
+     * @var NativeObjectBase $form_instance
+     * @var array $data
+     */
 
-    $tabPageName = 'tab' . $tabPageIndex;
-    $tabDescription = data_get($content, 'description');
+    $tabPageName = 'tab' . $data['tabPageIndex'];
+    $tabDescription = data_get($data['content'], 'description');
 @endphp
-<div class="tab-pane show @if($tabPageIndex == 0) active @endif"
-     id="{{ $tabControlName }}-{{ $tabPageName }}-content" role="tabpanel"
-     aria-labelledby="{{ $tabControlName }}-{{ $tabPageName }}-tab" @if($livewire ?? null) wire:ignore.self @endif
+<div class="tab-pane show @if($data['tabPageIndex'] == 0) active @endif"
+     id="{{ $data['tabControlName'] }}-{{ $tabPageName }}-content" role="tabpanel"
+     aria-labelledby="{{ $data['tabControlName'] }}-{{ $tabPageName }}-tab" @if($livewire ?? null) wire:ignore.self @endif
 >
     {{--When tab is disabled, tab buttons can't be pressed, so we don't need to render the content--}}
-    @if(!$disabled)
+    @if(!$data['disabled'])
         <div class="container">
             @if($tabDescription)
                 <div class="row">
@@ -28,7 +22,7 @@
                 </div>
             @endif
             <div class="row">
-                {!! $form_instance->renderElement('full_form', '', $content, get_defined_vars()); !!}
+                {!! $form_instance->renderElement('full_form', '', $data['content'], $data); !!}
             </div>
         </div>
     @endif

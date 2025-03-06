@@ -1,7 +1,9 @@
 import sort from '@alpinejs/sort'
+
 Alpine.plugin(sort)
 
 import {SortableMultiSelect} from "./sortableMultiSelect";
+
 window.SortableMultiSelect = SortableMultiSelect;
 
 /**
@@ -13,7 +15,7 @@ export class Form {
     /**
      *
      */
-    modelName = 'Base';
+    modelName = null;
 
     /**
      *
@@ -69,6 +71,30 @@ export class Form {
             }, (event) => {
             });
         }
+    }
+
+    /**
+     * Test falsy inclusive "0"
+     *
+     * @param v
+     * @returns {boolean}
+     */
+    isValueEmpty(v) {
+        if (!v) return true;
+        let i = parseInt(v);
+        if (isNaN(i)) {
+            // a valued string ...
+            // do not trim
+
+
+            if (v === '_no_choice_') { // app('system_base')::selectValueNoChoice
+                return true;
+            }
+
+            //
+            return false;
+        }
+        return !i;
     }
 
 } // no ; at the end of class declaration

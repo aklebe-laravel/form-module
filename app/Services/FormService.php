@@ -64,7 +64,7 @@ class FormService extends BaseService
      */
     public static function getFormElementFormViewModeOptions(): array
     {
-        return app(CacheService::class)->rememberForever('form_element.select_form_view_mode.options', function () {
+        return app(CacheService::class)->rememberFrontend('form_element.select_form_view_mode.options', function () {
             return [
                 NativeObjectBase::viewModeSimple   => __('Simple'),
                 NativeObjectBase::viewModeDefault  => __('Default'),
@@ -81,11 +81,11 @@ class FormService extends BaseService
     public static function getFormElementFormViewMode(array $mergeData = []): array
     {
         return app('system_base')->arrayMergeRecursiveDistinct([
-            'html_element' => 'select',
-            'options'      => static::getFormElementFormViewModeOptions(),
-            'name' => 'controls.set_view_mode',
-            'livewire' => 'liveCommands',
-            'livewire_live' => true,
+            'html_element'      => 'select',
+            'options'           => static::getFormElementFormViewModeOptions(),
+            'name'              => 'controls_set_view_mode',
+            'livewire'          => 'liveCommands',
+            'livewire_live'     => true,
             'livewire_debounce' => 200,
         ], $mergeData);
     }
@@ -97,7 +97,7 @@ class FormService extends BaseService
      */
     public static function getFormElementFormThemeFileOptions(array $themeOptions): array
     {
-        return app(CacheService::class)->rememberForever('form_element.select_form_theme_file.options', function () use ($themeOptions) {
+        return app(CacheService::class)->rememberFrontend('form_element.select_form_theme_file.options', function () use ($themeOptions) {
             /** @var ThemeService $themeService */
             $themeService = app(ThemeService::class);
             /** @var SystemService $systemService */
@@ -105,13 +105,14 @@ class FormService extends BaseService
 
             $folder = data_get($themeOptions, 'path', '');
 
-            $directoryDeep = (int)data_get($themeOptions, 'directory_deep', 0);
+            $directoryDeep = (int) data_get($themeOptions, 'directory_deep', 0);
             $regexWhitelist = data_get($themeOptions, 'regex_whitelist', []);
             $regexBlacklist = data_get($themeOptions, 'regex_blacklist', []);
             $addDelimiters = data_get($themeOptions, 'add_delimiters', '');
 
             $files = $themeService->getFilesFromTheme($folder, '', $directoryDeep, $regexWhitelist, $regexBlacklist, $addDelimiters);
-            return $systemService->toHtmlSelectOptions($files, null, '[key]', $systemService->selectOptionsSimple[$systemService::selectValueNoChoice], $systemService::SortModeByKey|$systemService::SortModeAsc);
+
+            return $systemService->toHtmlSelectOptions($files, null, '[key]', $systemService->selectOptionsSimple[$systemService::selectValueNoChoice], $systemService::SortModeByKey | $systemService::SortModeAsc);
         });
     }
 
@@ -131,7 +132,7 @@ class FormService extends BaseService
             'validator'    => [
                 'nullable',
                 'string',
-                'Max:255'
+                'Max:255',
             ],
             'css_group'    => 'col-12',
         ], $mergeData);

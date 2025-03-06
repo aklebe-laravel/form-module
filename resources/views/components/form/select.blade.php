@@ -1,76 +1,31 @@
 @php
-    /**
-     * Select unterstützt kein ReadOnly wird aber hier die options deaktivieren
-     *
-     * @var bool $visible maybe always true because we are here
-     * @var bool $disabled enabled or disabled
-     * @var bool $read_only disallow edit
-     * @var bool $auto_complete auto fill user inputs
-     * @var string $name name attribute
-     * @var string $label label of this element
-     * @var mixed $value value attribute
-     * @var mixed $default default value
-     * @var bool $read_only
-     * @var string $description
-     * @var string $css_classes
-     * @var string $css_group
-     * @var string $x_model optional for alpine.js
-     * @var string $xModelName optional for alpine.js
-     * @var string $livewire
-     * @var bool $livewire_live
-     * @var int $livewire_debounce
-     * @var array $html_data data attributes
-     * @var array $html_data x-on attributes
-     * @var array $x_data
-     * @var int $element_index
-     * @var array $options
-     */
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
 
-    $multiple ??= false;
-    if (!isset($xModelName)) {
-        $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
-    }
-    $_liveWireAttr = '';
-    if ($livewire) {
-        $_liveWireAttr = 'wire:model'.(($livewire_live) ? ('.live'.(($livewire_debounce) ? ('.debounce.'.$livewire_debounce.'ms') : '')) : '').'="'.$livewire.'.'.$name.'"';
-    }
+    /**
+     * @var NativeObjectBase $form_instance
+     * @var array $data
+     */
 @endphp
-<div class="form-group form-label-group {{ $css_group }}">
+<div class="form-group form-label-group {{ $data['css_group'] }}">
     @include('form::components.form.element-parts.label')
-    <select
-            name="{{ $name }}"
-            class="form-select {{ $css_classes }}"
-            @if($xModelName) x-model="{{ $xModelName }}" @endif
-            @if($_liveWireAttr) {!! $_liveWireAttr !!} @endif
-            @if ($wireIgnore ?? false) wire:ignore.self @endif
-            @if($disabled) disabled="disabled" @endif
-            @if($multiple) multiple="multiple" size="{{ !empty($list_size) ? $list_size : 6 }}" @endif
-            @if($read_only) readonly @endif
-            @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
-            @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
-    >
-        @unless(empty($options))
-            @php
-                if (app('system_base')->isCallableClosure($options)) {
-                    $options = $options();
-                }
-            @endphp
-            @foreach($options as $k => $v)
-                @if(isset($cmpCi) && $cmpCi)
+    <select {!! $form_instance->calcInputAttributesString($data) !!}>
+        @unless(empty($data['options']))
+            @foreach($data['options'] as $k => $v)
+                @if(isset($data['cmpCi']) && $data['cmpCi'])
                     {{--@todo: extra logic like strCaseCompare() will be ignored here if wire is enabled above--}}
                     <option
-                            @if(!$xModelName && app('system_base')->strCaseCompare($k, $value)) selected="selected" @endif
+                            @if(!$data['x_model'] && app('system_base')->strCaseCompare($k, $data['value'])) selected="selected" @endif
                     value="{{ $k }}"
-                            @if(($k != $value) && ($disabled || $read_only)) disabled="disabled" @endif
+                            @if(($k != $data['value']) && ($data['disabled'] || $data['read_only'])) disabled="disabled" @endif
                     >{{ $v }}</option>
                 @else
                     @php
-                        $_valueHit = (is_array($value) || is_object($value)) ? (in_array($k, (array)$value)) : ($k == $value);
+                        $_valueHit = (is_array($data['value']) || is_object($data['value'])) ? (in_array($k, (array)$data['value'])) : ($k == $data['value']);
                     @endphp
                     <option
-                            @if((!$xModelName) && ($_valueHit)) selected="selected" @endif
+                            @if((!$data['x_model']) && ($_valueHit)) selected="selected" @endif
                     value="{{ $k }}"
-                            @if((!$_valueHit) && ($disabled || $read_only)) disabled="disabled" @endif
+                            @if((!$_valueHit) && ($data['disabled'] || $data['read_only'])) disabled="disabled" @endif
                     >{{ $v }}</option>
                 @endif
             @endforeach

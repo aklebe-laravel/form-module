@@ -2,6 +2,7 @@
 
 namespace Modules\Form\app\Http\Livewire\Form\Base;
 
+use Closure;
 use Exception;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Foundation\Application;
@@ -396,87 +397,44 @@ class ModelBase extends NativeObjectBase
     /**
      * Prepare the data like name, value, ... for the view.
      *
-     * @param  string  $element
-     * @param  string  $name
-     * @param  array   $options
-     * @param  array   $parentOptions
+     *
+     *
+     * @param  string        $element
+     * @param  string        $name
+     * @param  array         $options
+     * @param  array         $parentOptions
+     * @param  Closure|null  $callbackExtraValidate
+     * @param  Closure|null  $callbackTransformValue  *
      *
      * @return array
      */
-    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = []): array
+    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = [], ?Closure $callbackExtraValidate = null, ?Closure $callbackTransformValue = null): array
     {
-        $parentName = data_get($parentOptions, 'name', '');
+        return parent::prepareFormViewData($element,
+            $name,
+            $options,
+            $parentOptions,
+            function ($name) {
+                // Don't include fields not in table columns or not in resource itself!
+                // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
+                $allColumns = $this->getModelTableColumns();
+                if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
+                    return false;
+                }
 
-        // first fill default values
-        $viewData = static::defaultViewData;
+                return true;
+            },
+            function ($name, $value) {
+                // hits all rooted (non-dotted) properties ...
+                if (!str_contains($name, '.')) {
+                    // Check whether value is a $cast attribute, and we have to transform it before view (like json)
+                    $value = $this->checkViewDataCastAttributeValue($name, $value);
+                    // object for livewire ...
+                    data_set($this->getDataSource()->resource, $name, $value);
+                }
 
-        // adjust some special cases ...
-        if ($element == 'multi_select') {
-            $viewData['value'] = [];
-        }
-
-        // merge/inherit parent data
-        if ($parentOptions) {
-            // @todo: why is arrayCopyWhitelisted() not enough?
-            //$viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $parentOptions);
-            $viewData = app('system_base')->arrayRootCopyWhitelistedNoArrays($viewData, $parentOptions, $this->inheritViewData);
-        }
-
-        // merge/inherit current data
-        // @todo: why is arrayCopyWhitelisted() not enough?
-        $viewData = app('system_base')->arrayMergeRecursiveDistinct($viewData, $options);
-
-        /**
-         * get name by (first given wins)
-         * 1) field from viewData['name']
-         * 2) field from viewData['property']
-         * 3) take parameter $name
-         * 4) add parent name to path if given
-         */
-        //$name = data_get($viewData, 'name') ?: data_get($viewData, 'property') ?: $name;
-        $name = $this->getElementName($viewData, $name);
-        $name = ($parentName && $name) ? ($parentName.'.'.$name) : $name;
-
-        // Don't include fields not in table columns or not in resource itself!
-        // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
-        $allColumns = $this->getModelTableColumns();
-        if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
-            return $viewData;
-        }
-
-        //
-        $resourcePrevValue = data_get($this->getDataSource()->resource, $name);
-
-        /**
-         * get value by (first given wins)
-         * 1) direct set by form field viewData['value']
-         * 2) from dataSource (if not null)
-         * 3) from field viewData['default']
-         *
-         * @todo : point 3 is questionable especially if value is false, maybe remove 'default' this way
-         * @fixed: overwritten null wich was needed
-         */
-        $value = data_get($viewData, 'value') ?: $resourcePrevValue;
-        if (!$value && ($default = data_get($viewData, 'default', ''))) {
-            $value = $default;
-        }
-
-        // hits all rooted (non-dotted) properties ...
-        if (!str_contains($name, '.')) {
-            // Check whether value is a $cast attribute, and we have to transform it before view (like json)
-            $value = $this->checkViewDataCastAttributeValue($name, $value);
-            // object for livewire ...
-            data_set($this->getDataSource()->resource, $name, $value);
-        }
-
-        // set calculated values for blade templates
-        $viewData['value'] = $value ?? '';
-        $viewData['name'] = $name;
-
-        //
-        $this->calculateCallableValues($viewData);
-
-        return $viewData;
+                return $value;
+            });
     }
 
     /**

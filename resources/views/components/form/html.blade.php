@@ -1,3 +1,3 @@
 <div class="">
-    <div class="{{ $css_classes }}">{!! $value !!}</div>
+    <div class="{{ $data['css_classes'] }}">{!! $data['value'] !!}</div>
 </div>

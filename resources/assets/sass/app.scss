@@ -10,6 +10,12 @@
     background-color: #e0e0ff;
 }
 
+input.form-control:focus, select.form-select:focus, textarea.form-control:focus {
+    background-color: #ffffe0;
+    color: #2020c0;
+    border-color: #5050e0;
+}
+
 .form-group {
     .image-box {
         .fake-img {
@@ -18,4 +24,20 @@
             background: linear-gradient(180deg, rgba(215, 10, 194, 1) 0%, rgba(0, 0, 0, 1) 100%);
         }
     }
+
+    .default-value {
+        color: #7070ff;
+        border-color: #8080ff;
+        //background: #d8d8ff;
+        //background: linear-gradient(180deg, #d8d8ff 0%, #fff 100%);
+    }
+
+    //.changed-value {
+    //    border: 1px solid #8080ff;
+    //}
+
+    //.default-value:focus {
+    //    background-color: #d0d8ff;
+    //    color: #304080;
+    //}
 }

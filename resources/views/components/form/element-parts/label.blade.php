@@ -1,10 +1,9 @@
-@unless(empty($label))
+@unless(empty($data['label']))
     @php
-        $labelShort = $label;
-        if (!empty($label_limit)) {
-            $labelShort = Str::limit($label, $label_limit);
+        $labelShort = $data['label'];
+        if (!empty($data['label_limit'])) {
+            $labelShort = Str::limit($data['label'], $data['label_limit']);
         }
     @endphp
-    <label class="" @if($label !== $labelShort) title="{{ $label }}" @endif>{{ $labelShort }}</label>
+    <label class="" @if($data['label'] !== $labelShort) title="{{ $data['label'] }}" @endif>{{ $labelShort }}</label>
 @endunless
-

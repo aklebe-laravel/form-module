@@ -1,29 +1,20 @@
 @php
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+
     /**
-     *
-     * @var string $name
-     * @var string $label
-     * @var mixed $value
-     * @var bool $read_only
-     * @var string $description
-     * @var string $css_classes
-     * @var string $x_model
-     * @var string $xModelName
-     * @var array $html_data
-     * @var array $x_data
+     * @var NativeObjectBase $form_instance
+     * @var array $data
      */
 
-    $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
+    $xModelName = (($data['x_model']) ? ($data['x_model'] . '.' . $data['name']) : '');
 @endphp
-<div class="form-group form-label-group {{ $css_group }}">
-    @unless(empty($label))
-        <label class="">{{ $label }}</label>
-    @endunless
+<div class="form-group form-label-group {{ $data['css_group'] }}">
+    @include('form::components.form.element-parts.label')
     <div class="container image-box">
-        @if($value)
+        @if($data['value'])
             <img
-                @if($xModelName) :src="{{ $xModelName }}" @else src="{{ $value }}" @endif
-                alt="{{ $value }}"
+                @if($xModelName) :src="{{ $xModelName }}" @else src="{{ $data['value'] }}" @endif
+                alt="{{ $data['value'] }}"
             >
         @else
             <div class="bg-light text-danger p-4 fake-img">

@@ -1,41 +1,23 @@
 @php
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+
     /**
-     *
-     * @var string $name
-     * @var string $label
-     * @var mixed $value
-     * @var bool $read_only
-     * @var string $description
-     * @var string $css_classes
-     * @var string $x_model
-     * @var string $xModelName
-     * @var array $html_data
-     * @var array $x_data
-     * @var mixed $validator
-     * @var string $css_group
+     * @var NativeObjectBase $form_instance
+     * @var array $data
      */
 
-    $xModelName = (($x_model) ? ($x_model . '.' . $name) : '');
-    $_shouldValidateBool = (is_array($validator) && (in_array('bool', $validator)) ? true : (($validator === 'bool') ? true : false));
-    $_formattedValue = $value;
-    if (is_bool($value) || $_shouldValidateBool) {
-        $_formattedValue = $value ? __('Yes') : __('No');
-        $css_group .= $value ? ' alert alert-danger' : ' alert alert-success';
-    } elseif (is_array($value) || is_object($value)) {
-        $_formattedValue = print_r($value, true);
+    $_shouldValidateBool = (is_array($data['validator']) && (in_array('bool', $data['validator'])) ? true : (($data['validator'] === 'bool') ? true : false));
+    $_formattedValue = $data['value'];
+    if (is_bool($data['value']) || $_shouldValidateBool) {
+        $_formattedValue = $data['value'] ? __('Yes') : __('No');
+        $data['css_group'] .= $data['value'] ? ' alert alert-danger' : ' alert alert-success';
+    } elseif (is_array($data['value']) || is_object($data['value'])) {
+        $_formattedValue = print_r($data['value'], true);
     }
     // $_formattedValue = print_r($validator, true);
 @endphp
-<div class="form-group form-label-group {{ $css_group }}">
+<div class="form-group form-label-group {{ $data['css_group'] }}">
     @include('form::components.form.element-parts.label')
-    <div class="form-control-info {{ $css_classes }}"
-         class="form-control {{ $css_classes }}"
-         @if($xModelName) x-model="{{ $xModelName }}" @endif
-         @if($disabled) disabled="disabled" @endif
-         @if($read_only) read_only @endif
-         @foreach($html_data as $k => $v) data-{{ $k }}="{{ $v }}" @endforeach
-         @foreach($x_data as $k => $v) x-{{ $k }}="{{ $v }}" @endforeach
-
-    >{!! $_formattedValue !!}</div>
+    <div class="form-control-info {{ $data['css_classes'] }}">{!! $_formattedValue !!}</div>
     @include('form::components.form.element-parts.description')
 </div>

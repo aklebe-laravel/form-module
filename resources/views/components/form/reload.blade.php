@@ -4,13 +4,13 @@
 
     /** @var ModelBase $this */
     $_v = array_merge(NativeObjectBase::defaultViewData, [
-        'name' => 'controls.reload',
+        'name' => 'controls_reload',
         'label' => '',
         'bs_icon' => 'box-arrow-in-down',
         'css_classes' => 'btn btn-danger w-auto',
         'css_group' => 'w-auto',
-        'livewire_click' => '$dispatchSelf(\'updating\', {\'property\':\'controls.reload\',\'value\':true})',
+        'livewire_click' => '$dispatchSelf(\'updating\', {\'property\':\'controls_reload\',\'value\':true})',
         'livewire_debounce' => 100,
     ]);
 @endphp
-@include('form::components.form.button-alone', $_v)
+@include('form::components.form.button-alone', ['data' => $_v])
