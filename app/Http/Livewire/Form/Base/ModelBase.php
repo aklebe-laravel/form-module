@@ -17,6 +17,7 @@ use Livewire\Attributes\On;
 use Livewire\WithFileUploads;
 use Modules\SystemBase\app\Models\JsonViewResponse;
 use Modules\SystemBase\app\Services\CacheService;
+use Modules\WebsiteBase\app\Models\Base\TraitAttributeAssignment;
 
 /**
  * the Livewire Form Part.
@@ -369,7 +370,8 @@ class ModelBase extends NativeObjectBase
      */
     public function makeObjectModelInstance(array $data = []): Model
     {
-        return $this->getObjectEloquentModel()->make(array_merge($this->objectInstanceDefaultValues, $data));
+        /** @var Model|TraitAttributeAssignment $x */
+        return $this->getObjectEloquentModel()->newInstance(app('system_base')->arrayMergeRecursiveDistinct($this->objectInstanceDefaultValues, $data));
     }
 
     /**
@@ -418,7 +420,7 @@ class ModelBase extends NativeObjectBase
                 // Don't include fields not in table columns or not in resource itself!
                 // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
                 $allColumns = $this->getModelTableColumns();
-                if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->getDataSource()->resource, $name))) {
+                if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->getDataSource(), $name))) {
                     return false;
                 }
 
@@ -430,7 +432,7 @@ class ModelBase extends NativeObjectBase
                     // Check whether value is a $cast attribute, and we have to transform it before view (like json)
                     $value = $this->checkViewDataCastAttributeValue($name, $value);
                     // object for livewire ...
-                    data_set($this->getDataSource()->resource, $name, $value);
+                    data_set($this->dataSource, $name, $value);
                 }
 
                 return $value;

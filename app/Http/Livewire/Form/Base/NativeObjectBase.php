@@ -1024,13 +1024,11 @@ class NativeObjectBase extends BaseComponent
         }
 
         //
-        $resourcePrevValue = data_get($this->getDataSource()->resource, $name);
+        $resourcePrevValue = data_get($this->getDataSource(), $name);
 
         // assign default if not explicit set in viewData
         if ((!Arr::has($options, 'default')) && Arr::has($this->objectInstanceDefaultValues, $name)) {
             $viewData['default'] = data_get($this->objectInstanceDefaultValues, $name);
-            //data_set($viewData, 'html_data.default', $viewData['default']);
-            //Log::debug("default1", [$name, $viewData['default'], __METHOD__]);
         }
 
         /**
