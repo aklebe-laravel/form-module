@@ -365,13 +365,14 @@ class ModelBase extends NativeObjectBase
 
     /**
      * @param  array  $data
+     * @param  bool   $addDefaults
      *
      * @return Model
      */
-    public function makeObjectModelInstance(array $data = []): Model
+    public function makeObjectModelInstance(array $data = [], bool $addDefaults = true): Model
     {
         /** @var Model|TraitAttributeAssignment $x */
-        return $this->getObjectEloquentModel()->newInstance(app('system_base')->arrayMergeRecursiveDistinct($this->objectInstanceDefaultValues, $data));
+        return $this->getObjectEloquentModel()->newInstance(app('system_base')->arrayMergeRecursiveDistinct($addDefaults ? $this->objectInstanceDefaultValues : [], $data));
     }
 
     /**
@@ -534,7 +535,11 @@ class ModelBase extends NativeObjectBase
         if (!($id = ($itemData[$protoType->getKeyName()] ?? 0))) {
             // Create the object here to get the id
             // but be able to update below!
-            $objectInstance = $this->makeObjectModelInstance($cleanData);
+
+            // this way the appends results in sql error like column not found
+            //$objectInstance = $this->makeObjectModelInstance($cleanData, false);
+            // so simply use create
+            $objectInstance = $this->getObjectEloquentModel()::create($cleanData);
 
             $this->onBeforeUpdateItem($itemData, $jsonResponse, $objectInstance);
 
@@ -544,7 +549,7 @@ class ModelBase extends NativeObjectBase
                 }
             } catch (Exception $exception) {
                 $jsonResponse->setErrorMessage(__('Failed to save.'));
-                Log::error($exception->getMessage());
+                Log::error('Error creating: ', [$exception->getMessage(), __METHOD__]);
             }
 
 
@@ -572,7 +577,7 @@ class ModelBase extends NativeObjectBase
                     }
                 } catch (Exception $exception) {
                     $jsonResponse->setErrorMessage(__('Failed to update.'));
-                    Log::error($exception->getMessage());
+                    Log::error('Error updating: ', [$exception->getMessage(), __METHOD__]);
                 }
             }
         }
