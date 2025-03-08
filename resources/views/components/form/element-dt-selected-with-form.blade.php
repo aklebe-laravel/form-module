@@ -7,10 +7,9 @@
      * @var array $data
      */
 
-    $options = $data['options'];
-    $options['table_options']['selectable'] = false;
-    $options['table_options']['enabledCollectionNames'] = [ // enable only the selected table
+    data_set($data,'options.table_options.selectable', false);
+    data_set($data,'options.table_options.enabledCollectionNames', [ // enable only the selected table
         BaseDataTable::COLLECTION_NAME_SELECTED_ITEMS => true,
-    ];
+    ]);
 @endphp
 @include('form::components.form.element-dt-split-with-form')
