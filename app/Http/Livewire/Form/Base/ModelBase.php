@@ -1,0 +1,906 @@
+<?php
+
+namespace Modules\Form\app\Http\Livewire\Form\Base;
+
+use Closure;
+use Exception;
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
+use Livewire\WithFileUploads;
+use Modules\SystemBase\app\Models\JsonViewResponse;
+use Modules\SystemBase\app\Services\CacheService;
+
+/**
+ * the Livewire Form Part.
+ */
+class ModelBase extends NativeObjectBase
+{
+    use WithFileUploads;
+
+    /**
+     * Default needed relations (used by ->with(...)).
+     * Also used by:
+     * - blacklist of properties used by array_diff_key() to clean poor model data
+     * - onAfterUpdateItem() to sync relations
+     *
+     * @var array
+     */
+    public array $objectRelations = [];
+
+    /**
+     * Model name incl. namespace!
+     * Can explicit overwritten in class, if no automatic generation by related eloquent model is wanted.
+     *
+     * @var string|null
+     */
+    public ?string $objectEloquentModelName = null;
+
+    /**
+     * Set for example 'web_uri' or 'shared_id' to try load from this property if is not numeric in initDataSource().
+     * Model have to be trait by TraitBaseModel to become loadByFrontEnd()
+     *
+     * @var string
+     */
+    public const string frontendKey = '';
+
+    /**
+     * @param $id
+     *
+     * @return Model
+     */
+    public function loadDataSource($id): Model
+    {
+        if ($id) {
+
+            $builder = $this->getObjectEloquentModel()->with($this->objectRelations);
+            if (static::frontendKey) {
+                $builder->loadByFrontEnd($id, static::frontendKey);
+            } else {
+                $builder->whereId($id);
+            }
+
+            if ($x = $builder->first()) {
+                // parent id (the id from parent form if form in form)
+                // @todo: find a better place?
+                $x->relatedPivotModelId = data_get($this->parentData, 'id'); // parent id or null
+            } else {
+                // Not found error or 404 ...
+                $this->addErrorMessage(__(':name not found.', ['name' => __($this->objectFrontendLabel)]));
+                $this->closeForm();
+            }
+
+            return $x ?: $this->makeObjectModelInstance();
+
+        } else {
+            return $this->makeObjectModelInstance();
+        }
+    }
+
+    /**
+     * Get the proper eloquent model name inclusive namespace.
+     *
+     * @return string
+     */
+    public function getObjectEloquentModelName(): string
+    {
+        if ($this->objectEloquentModelName === null) {
+            $this->objectEloquentModelName = app('system_base')->findModuleClass(app('system_base')->getSimpleClassName(static::class));
+        }
+
+        return $this->objectEloquentModelName;
+    }
+
+    /**
+     * Get the proper eloquent model instance.
+     *
+     * @return Model
+     */
+    public function getObjectEloquentModel(): Model
+    {
+        return app($this->getObjectEloquentModelName());
+    }
+
+    /**
+     * @param  string|int  $id
+     *
+     * @return void
+     * @throws BindingResolutionException
+     */
+    #[On('duplicate-and-open-form')]
+    public function duplicateAndOpenForm(string|int $id): void
+    {
+        if ($item = app('system_base')->getEloquentModelBuilder(app('system_base')->getSimpleClassName($this->getObjectEloquentModelName()))->whereKey($id)->first()) {
+
+            $methodReplicateRelations = 'replicateWithRelations';
+            if (method_exists($item, $methodReplicateRelations)) {
+                $newItem = $item->$methodReplicateRelations();
+                // refresh table ...
+                $this->refreshDatatable();
+                // open form ...
+                $this->openForm($newItem->getKey());
+            } else {
+                $this->addErrorMessage('Unable to duplicate.');
+                Log::error("Method not found. Use TraitBaseModel!", [$methodReplicateRelations, __METHOD__]);
+            }
+
+
+        } else {
+            $this->addErrorMessage('Unable to duplicate.');
+            Log::error("Item not found", [$id, __METHOD__]);
+        }
+
+    }
+
+    /**
+     * @param  mixed  $livewireId
+     * @param  mixed  $itemId
+     *
+     * @return bool
+     * @throws Exception
+     */
+    #[On('delete-item')]
+    public function deleteItem(mixed $livewireId, mixed $itemId): bool
+    {
+        if (!$this->checkLivewireId($livewireId)) {
+            return false;
+        }
+
+        if ($this->dataSource) {
+            if ($this->dataSource->delete()) {
+                $this->addSuccessMessage("Item deleted.");
+            }
+        }
+
+        // close form after deleting
+        $this->closeFormAndRefreshDatatable();
+
+        return true;
+    }
+
+    /**
+     * @return array
+     */
+    public function validateForm(): array
+    {
+        // Model have to exists ...
+        //if ($modelLoaded = $this->loadDataSource($this->formObjectId)) {
+        if ($modelLoaded = $this->dataSource) {
+
+            // format to id array
+            $this->runObjectRelationsRootProperties($this->dataTransfer, function ($propertyKey, $dataInItems) use ($modelLoaded) {
+
+                // In general, we need sync only.
+                // No need for saveMany() because we want exactly what we selected in datatables.
+                if ($hasSync = method_exists($modelLoaded->$propertyKey(), 'sync')) { // || ($hasSaveMany = method_exists($modelLoaded->$propertyKey(), 'saveMany'))) {
+
+                    $idArray = [];
+                    // each relation like 'mediaItems'
+                    foreach ($this->dataTransfer[$propertyKey] ?? [] as $v) {
+                        if (is_array($v)) {
+                            if ($hasSync && isset($v['id'])) {
+                                // use ids only
+                                $idArray[] = $v['id']; // @todo: resolve id
+                            } elseif ($hasSaveMany ?? false) {
+                                // use whole object
+                                $idArray[] = $v;
+                            }
+                        }
+                    }
+
+                    $this->trySetDataTransferValue($propertyKey, $idArray);
+                }
+
+            });
+
+            try {
+
+                $jsonResponse = new JsonViewResponse();
+                $validatedData = $this->validateFormData($this->dataTransfer, $jsonResponse);
+                if (!$validatedData || $jsonResponse->hasErrors()) {
+                    $this->addErrorMessages($jsonResponse->getErrors());
+                }
+
+                return $validatedData;
+
+            } catch (Exception $exception) {
+
+                Log::error($exception->getMessage());
+                Log::error($exception->getTraceAsString());
+
+                $this->addErrorMessage('Unable to validate Data.');
+            }
+
+        }
+
+        return [];
+    }
+
+    /**
+     * Called by save() or other high level calls.
+     *
+     * @return JsonViewResponse
+     */
+    protected function saveFormData(): JsonViewResponse
+    {
+        if ($this->validateForm()) {
+
+            try {
+
+                $updateList = [
+                    [
+                        'data'       => $this->dataTransfer,
+                        'parentData' => $this->parentData,
+                    ],
+
+                ];
+
+                return $this->runUpdateList($updateList);
+
+            } catch (Exception $exception) {
+
+                Log::error($exception->getMessage());
+                Log::error($exception->getTraceAsString());
+
+                $jsonResponse = new JsonViewResponse();
+                $jsonResponse->setErrorMessage(sprintf("Unable to save Model: %s", $exception->getMessage()));
+
+                return $jsonResponse;
+
+            }
+
+        }
+
+        $jsonResponse = new JsonViewResponse();
+        $jsonResponse->setErrorMessage('Unable to load data or validation error.');
+
+        return $jsonResponse;
+    }
+
+    /**
+     * add an object with a field 'id'
+     *
+     * @param  string  $relationPath
+     * @param  mixed   $itemId
+     *
+     * @return void
+     */
+    private function addIdToRelationIfNotExists(string $relationPath, mixed $itemId): void
+    {
+        if (isset($this->dataTransfer[$relationPath])) {
+            foreach ($this->dataTransfer[$relationPath] as $v) {
+                if ($v['id'] == $itemId) {
+                    return;
+                }
+            }
+            $this->dataTransfer[$relationPath][] = ['id' => $itemId];
+        }
+    }
+
+    /**
+     * Livewire event when updating relations (from sub datatable checkbox)
+     *
+     * @param  string  $relationPath
+     * @param  array   $values
+     * @param  bool    $skipRender
+     *
+     * @return void
+     */
+    #[On('update-relations')]
+    public function updateRelations(string $relationPath, array $values, bool $skipRender = true): void
+    {
+        // check relation like 'mediaItems' exists
+        if (isset($this->dataTransfer[$relationPath])) {
+            $newRelation = [];
+            // assign all values still present, so not presented values are deleted after ...
+            foreach ($this->dataTransfer[$relationPath] as $v) {
+                if (in_array($v['id'], $values)) {
+                    $newRelation[] = $v;
+                }
+            }
+            $this->trySetDataTransferValue($relationPath, $newRelation);
+
+            foreach ($values as $v) {
+                $this->addIdToRelationIfNotExists($relationPath, $v);
+            }
+        }
+
+        // avoid rerender form (and hide the current form tab)
+        if ($skipRender) {
+            $this->skipRender();
+        }
+    }
+
+    /**
+     * @return Application|Factory|View
+     */
+    public function render(): View|Factory|Application
+    {
+        //
+        $this->beforeRender();
+
+        //
+        return view('form::livewire.forms.default-model-base');
+    }
+
+    /**
+     * Called Livewire/FiledUpload
+     * Overwrite this if needed!
+     *
+     * Upload relevant relation should be updated from here.
+     * Otherwise, the form don't know about the (child) upload in \Modules\WebsiteBase\Http\Livewire\FilesUpload::finishUpload
+     * and the relation to the uploaded image is lost.
+     *
+     * @param  mixed  $mediaItemId
+     *
+     * @return void
+     */
+    #[On('upload-process-finished')]
+    public function uploadProcessFinished(mixed $mediaItemId): void
+    {
+        // don't miss the new relation by pressing accept/save form ...
+        $this->addIdToRelationIfNotExists('mediaItems', $mediaItemId);
+    }
+
+    /**
+     * @param  array  $data
+     * @param  bool   $addDefaults
+     *
+     * @return Model
+     */
+    public function makeObjectModelInstance(array $data = [], bool $addDefaults = true): Model
+    {
+        return $this->getObjectEloquentModel()->newInstance(app('system_base')->arrayMergeRecursiveDistinct($addDefaults ? $this->objectInstanceDefaultValues : [], $data));
+    }
+
+    /**
+     * @return string
+     */
+    protected function getModelTable(): string
+    {
+        $modelName = $this->getObjectEloquentModelName();
+
+        return app('system_base')->getModelTable($modelName);
+    }
+
+    /**
+     * @return array
+     */
+    public function getModelTableColumns(): array
+    {
+        return app(CacheService::class)->rememberUseConfig('form_model_table_columns_'.$this->getObjectEloquentModelName(), 'system-base.cache.db.signature.ttl', function () {
+            return app('system_base')->getDbColumns($this->getModelTable());
+        });
+
+    }
+
+
+    /**
+     * Prepare the data like name, value, ... for the view.
+     *
+     *
+     *
+     * @param  string        $element
+     * @param  string        $name
+     * @param  array         $options
+     * @param  array         $parentOptions
+     * @param  Closure|null  $callbackExtraValidate
+     * @param  Closure|null  $callbackTransformValue  *
+     *
+     * @return array
+     */
+    public function prepareFormViewData(string $element, string $name, array $options = [], array $parentOptions = [], ?Closure $callbackExtraValidate = null, ?Closure $callbackTransformValue = null): array
+    {
+        return parent::prepareFormViewData($element,
+            $name,
+            $options,
+            $parentOptions,
+            function ($name) {
+                // Don't include fields not in table columns or not in resource itself!
+                // (filtered out keys like '', '0', 'sdgfdgdfgdfgdfgd' (from livewire?) or other extern stuff in dataSource)
+                $allColumns = $this->getModelTableColumns();
+                if ((!in_array($name, $this->forceValidElementFields)) && (!in_array($name, $allColumns)) && (!app('system_base')->hasData($this->dataSource, $name))) {
+                    return false;
+                }
+
+                return true;
+            },);
+    }
+
+    /**
+     * Overwritten to preload resource model.
+     *
+     * @param  array             $data
+     * @param  JsonViewResponse  $jsonResponse
+     * @param  array             $additionalValidateFormat
+     *
+     * @return array
+     * @throws ValidationException
+     */
+    public function validateFormData(array $data, JsonViewResponse $jsonResponse, array $additionalValidateFormat = []): array
+    {
+        // We should load the original model first to get all elements
+        // having conditions like can_edit depends on the loaded resource!
+        // So check resource exists and key is present, otherwise load it.
+
+        //if ($maybeEmptyResource = $this->initDataSource()) {
+        //    if (!$maybeEmptyResource->resource->getKey()) {
+        //        $keyName = $maybeEmptyResource->resource->getKeyName();
+        //        if ($keyValue = data_get($data, $keyName)) {
+        //            $this->initDataSource($keyValue);
+        //        }
+        //    }
+        //}
+
+        return parent::validateFormData($data, $jsonResponse, $additionalValidateFormat);
+    }
+
+
+    /**
+     * This is like a singleton.
+     * Don't change their data!
+     *
+     * @return Model
+     */
+    public function getEloquentModelPrototype(): Model
+    {
+        return app(CacheService::class)->rememberUseConfig('form_prototype_'.$this->getObjectEloquentModelName(), 'system-base.cache.object.signature.ttl', function () {
+            return $this->loadDataSource(null); // empty resource to know key
+        });
+
+    }
+
+    /**
+     * @param  array             $itemData
+     * @param  JsonViewResponse  $jsonResponse
+     *
+     * @return array
+     * @throws Exception
+     */
+    public function updateItem(array $itemData, JsonViewResponse $jsonResponse): array
+    {
+        $updateResult = parent::updateItem($itemData, $jsonResponse);
+
+        // @todo: cache?
+        $protoType = $this->getEloquentModelPrototype(); // empty resource to know key
+
+        // cleanup data to saving poor main object
+        $cleanData = $this->getCleanObjectDataForSaving($itemData);
+
+        /**
+         * Do not change this behavior!
+         * 1) Create if needed
+         * 2) Assign Attributes
+         * 3) Save or update
+         * 4) Model have to exist and id have to present now
+         * 5) reset cached attributes
+         * 6) do relation stuf calling onAfterUpdateItem()
+         *
+         * @todo: Build feature test for create and update!
+         */
+        // If no id, create new item ...
+        if (!($id = ($itemData[$protoType->getKeyName()] ?? 0))) {
+            // Create the object here to get the id
+            // but be able to update below!
+
+            // this way the appends results in sql error like column not found
+            //$objectInstance = $this->makeObjectModelInstance($cleanData, false);
+            // so simply use create
+            $objectInstance = $this->getObjectEloquentModel()::create($cleanData);
+
+            $this->onBeforeUpdateItem($itemData, $jsonResponse, $objectInstance);
+
+            try {
+                if ($objectInstance->save()) {
+                    $updateResult['created'] = $objectInstance->getKey();
+                }
+            } catch (Exception $exception) {
+                $jsonResponse->setErrorMessage(__('Failed to save.'));
+                Log::error('Error creating: ', [$exception->getMessage(), __METHOD__]);
+            }
+
+
+        } else {
+
+            $collection = $this->getObjectEloquentModel()->with($this->objectRelations);
+            if ($objectInstance = $collection->find($id)) {
+
+                $objectInstance->relatedPivotModelId = data_get($this->parentData, 'id'); // parent id or null
+
+                $this->onBeforeUpdateItem($itemData, $jsonResponse, $objectInstance);
+
+                /**
+                 * prevent exception:
+                 * SQLSTATE[42S22]: Column not found: 1054 Unknown column 'relatedPivotModelId' in 'field list'
+                 *
+                 * @todo: maybe can placed in a cleaner way
+                 */
+                unset($objectInstance->relatedPivotModelId);
+
+                // Update main data (with $cleanData)
+                try {
+                    if ($objectInstance->updateTimestamps()->update($cleanData)) {
+                        $updateResult['updated'] = $objectInstance->getKey();
+                    }
+                } catch (Exception $exception) {
+                    $jsonResponse->setErrorMessage(__('Failed to update.'));
+                    Log::error('Error updating: ', [$exception->getMessage(), __METHOD__]);
+                    Log::error(print_r($cleanData, true));
+                }
+            }
+        }
+
+        $updateResult['object_instance'] = $objectInstance;
+
+        return $updateResult;
+    }
+
+    /**
+     * @param  array  $items
+     *
+     * @return JsonViewResponse
+     * @throws ValidationException
+     * @throws Exception
+     */
+    public function runUpdateList(array $items): JsonViewResponse
+    {
+        $jsonResponse = new JsonViewResponse(__(":name updated.", ['name' => __($this->objectFrontendLabel)]));
+        $successData = [
+            'created' => [],
+            'updated' => [],
+        ];
+
+        /**
+         * Commonly there is just ONE single item in list!
+         */
+        foreach ($items as $item) {
+
+            // object data have to present in 'data'
+            $itemData = data_get($item, 'data');
+            $this->parentData = data_get($item, 'parentData');
+
+            // Validate now
+            $itemData = $this->validateFormData($itemData, $jsonResponse);
+            if (!$itemData || $jsonResponse->hasErrors()) {
+                return $jsonResponse;
+            }
+
+            $updateResult = $this->updateItem($itemData, $jsonResponse);
+
+            if ($updateResult['updated']) {
+                $successData['updated'][] = $updateResult['updated'];
+            }
+            if ($updateResult['created']) {
+                $successData['created'][] = $updateResult['created'];
+            }
+
+            if ($updateResult['updated'] || $updateResult['created']) {
+                // use $itemData instead of $cleanData
+                $this->onAfterUpdateItem($itemData, $jsonResponse, $updateResult['object_instance']);
+            }
+
+        }
+
+        $jsonResponse->setData($successData);
+
+        return $jsonResponse;
+    }
+
+    /**
+     * Event after saved the object itself.
+     * Sync of relations should happen here.
+     *
+     * @param  array             $itemData
+     * @param  JsonViewResponse  $jsonResponse
+     * @param  mixed             $objectInstance
+     *
+     * @return bool
+     * @throws Exception
+     */
+    public function onAfterUpdateItem(array $itemData, JsonViewResponse $jsonResponse, mixed $objectInstance): bool
+    {
+        // Update relations
+        /** @var Model $objectInstance */
+        $this->runObjectRelationsRootProperties($itemData, function ($propertyKey, $dataInItems) use ($objectInstance) {
+
+            // properties from frontend form data exists in snake case,
+            // but we need camelCase for relations like defined in Model Form class
+            if (method_exists($objectInstance, $propertyKey)) { // relation exists ...
+
+                // sync() = BelongsToMany()
+                if (method_exists($objectInstance->$propertyKey(), 'sync')) { // ... and can use sync()?
+                    try {
+
+                        if (is_array($dataInItems)) {
+                            $sync = [];
+
+                            //
+                            foreach ($dataInItems as $objectDataKey => $objectData) {
+
+                                // @todo: 'id' dynamically
+                                if ($id = data_get($objectData, 'id')) {
+                                    if (($pivot = data_get($objectData, 'pivot')) && (is_array($pivot))) {
+                                        foreach ($pivot as $pivotKey => $pivotValue) {
+                                            $modelId = $pivotValue;
+                                            $sync[$id] = [$pivotKey => $modelId];
+                                        }
+                                    }
+                                } else {
+                                    // @todo: Has key any relevance?
+                                    $sync[] = $objectData;
+                                }
+                            }
+
+                            // Event before Sync ...
+                            $sync = $this->beforeSync($sync);
+
+                            // Sync it ...
+                            $objectInstance->$propertyKey()->sync($sync);
+                        }
+
+                    } catch (Exception $ex) {
+                        // @todo: belongsTo() missing ...
+                        Log::error('Error in sync() '.$propertyKey, ['onAfterUpdateItem']);
+                        Log::error($dataInItems);
+                        Log::error($ex->getMessage());
+                        Log::error($ex->getTraceAsString());
+                    }
+
+                } elseif (method_exists($objectInstance->$propertyKey(), 'saveMany')) {
+                    $this->syncHasManyRelation($objectInstance, $propertyKey, $dataInItems);
+                } else {
+                    // @TODO: A property which cannot be synced. Maybe no matter because of relation id in object should do the stuff already.
+                }
+            } else {
+                Log::error('Property '.$propertyKey.' is not a relation method.', ['onAfterUpdateItem']);
+            }
+
+        }, true);
+
+        // update pivots
+        foreach ($itemData as $k => $v) {
+            if ($objectInstance->hasAttributeMutator($k)) {
+                if ($newPivotData = data_get($v, 'pivot', [])) {
+                    if ($objectInstance->$k && $objectInstance->$k->pivot) {
+                        $objectInstance->$k->pivot->update($newPivotData);
+                    } // else : no parent id?
+                } // else no pivot data
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  Model   $model
+     * @param  string  $propertyKey
+     * @param  array   $dataInItems
+     *
+     * @return bool
+     * @throws Exception
+     */
+    protected function syncHasManyRelation(Model $model, string $propertyKey, array $dataInItems): bool
+    {
+        // 1. Validation: Check if the relation method exists and is valid
+        if (!method_exists($model, $propertyKey)) {
+            return false;
+        }
+
+        $relation = $model->$propertyKey();
+        if (!method_exists($relation, 'getRelated')) {
+            return false;
+        }
+
+        // 2. Resolve dynamic database keys
+        $relatedInstance = $relation->getRelated();
+        $primaryKeyName = $relatedInstance->getKeyName();       // Usually 'id'
+        $foreignKeyName = $relation->getForeignKeyName();     // Dynamically resolves e.g. 'template_id'
+
+        // 3. Get currently linked IDs from the database
+        $existingIds = $model->$propertyKey->pluck($primaryKeyName)->toArray();
+
+        // 4. Normalize incoming form data and extract targeted IDs
+        $idList = [];
+        $inputDataMap = []; // Helper map to quickly link IDs to their form data
+
+        foreach ($dataInItems as $dataInItem) {
+            $itemId = is_scalar($dataInItem) ? $dataInItem : data_get($dataInItem, $primaryKeyName);
+
+            if ($itemId) {
+                $idList[] = $itemId;
+                if (!is_scalar($dataInItem)) {
+                    $inputDataMap[$itemId] = (array) $dataInItem;
+                }
+            } elseif (is_array($dataInItem)) {
+                // Capture new items that don't have an ID yet for subsequent insertion
+                $inputDataMap['new_'.uniqid()] = $dataInItem;
+            }
+        }
+
+        // 5. Instantly delete removed records from the database
+        $deleteList = array_diff($existingIds, $idList);
+        if (!empty($deleteList)) {
+            $relation->whereIn($primaryKeyName, $deleteList)->delete();
+        }
+
+        // 6. Performance Optimization: Bulk-load all existing models at once (Prevents N+1 query issue)
+        $existingModels = !empty($idList) ? $relatedInstance->newQuery()->whereIn($primaryKeyName, $idList)->get()->keyBy($primaryKeyName) : collect();
+
+        // 7. Build the dynamic upsert payload
+        $upsertList = [];
+        $updateColumns = []; // Tracks which columns should actually be updated on conflict
+
+        foreach ($inputDataMap as $id => $itemData) {
+            $isNew = str_starts_with($id, 'new_');
+
+            // Fetch pre-existing attributes if available to preserve omitted form fields
+            /** @var Model $existingModel */
+            $existingModel = !$isNew ? $existingModels->get($id) : null;
+            $attributes = $existingModel ? $existingModel->attributesToArray() : [];
+
+            // Merge original database values with the new form inputs
+            $mergedData = array_merge($attributes, $itemData);
+
+            // Strip timestamps to allow database to handle them naturally
+            $filtered = Arr::except($mergedData, ['created_at', 'updated_at']);
+
+            // Enforce the dynamic foreign key assignment linking back to the parent model
+            $filtered[$foreignKeyName] = $model->getKey();
+
+            // Keep track of all keys that need updating (excluding the primary key)
+            $updateColumns = array_merge($updateColumns, array_keys(Arr::except($filtered, [$primaryKeyName])));
+
+            $upsertList[] = $filtered;
+        }
+
+        // 8. Execute the Laravel 13 compliant upsert operation
+        if (!empty($upsertList)) {
+            // Unique update columns list (duplicates removed)
+            $uniqueUpdateColumns = array_unique($updateColumns);
+
+            // Laravel 13 strict mode: The second argument (uniqueBy) MUST NOT be empty
+            $relation->upsert($upsertList, [$primaryKeyName], $uniqueUpdateColumns);
+        }
+
+        return true;
+    }
+
+    /**
+     * Runs through $this->objectRelations and returns the rootRelation once.
+     *
+     * @param  array     $items                         Daten aus Formular
+     * @param  callable  $callback                      Callback für jede Property
+     * @param  bool      $ignoreNotPresentedProperties  Wenn gesetzt, dann werden Properties nicht durchlaufen, die nicht in $items vorkommen.
+     *
+     * @return bool
+     */
+    public function runObjectRelationsRootProperties(array $items, callable $callback, bool $ignoreNotPresentedProperties = true): bool
+    {
+        $alreadyFound = [];
+        /** @var string $propertyKey */
+        foreach ($this->objectRelations as $propertyKey) {
+            if ($propertyKeyDeep = explode('.', $propertyKey)) { // could be more nested (like 'orders.items.options') ...
+
+                $propertyKey = $propertyKeyDeep[0];
+
+                if (isset($alreadyFound[$propertyKey])) {
+                    continue;
+                }
+                $alreadyFound[$propertyKey] = true;
+
+                if ($ignoreNotPresentedProperties) {
+                    if (($dataInItems = data_get($items, $propertyKey)) !== null) {
+                        $callback($propertyKey, $dataInItems);
+                    }
+                } else {
+                    $dataInItems = data_get($items, $propertyKey, []);
+                    $callback($propertyKey, $dataInItems);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get data without relations (from json)
+     *
+     * @param  array  $itemData
+     *
+     * @return array
+     */
+    public function getCleanObjectDataForSaving(array $itemData): array
+    {
+        $preparedDiffKeyArray = [];
+
+        // remove relations
+        $this->runObjectRelationsRootProperties($itemData, function ($propertyKey, $dataInItems) use (&$preparedDiffKeyArray) {
+            $preparedDiffKeyArray[$propertyKey] = [];
+        });
+
+        // get diff
+        $result = array_diff_key($itemData, $preparedDiffKeyArray);
+
+        // remove mutators
+        foreach ($result as $k => $v) {
+            if ($this->dataSource->hasAttributeMutator($k)) {
+                unset($result[$k]);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Overwrite this method to define your form.
+     * Call this method as parent::getFormElements() before to prepare the defaults.
+     *
+     * @return array
+     */
+    public function getFormElements(): array
+    {
+        return [
+            'css_classes' => 'form-edit',
+            'livewire'    => 'dataTransfer',
+            'title'       => $this->makeFormTitle($this->dataSource, 'id'),
+            'description' => !$this->dataSource->getKey() ? __('module_form_ensure_create_instance', ['name' => $this->objectFrontendLabel]) : '',
+        ];
+    }
+
+    /**
+     * @param  mixed   $dataSource
+     * @param  string  $displayKey
+     *
+     * @return string
+     */
+    protected function makeFormTitle(mixed $dataSource, string $displayKey): string
+    {
+        /** @var Model $dataSource */
+        if (!$this->canEdit()) {
+            $result = sprintf(__("Show %s: %s"), __($this->objectFrontendLabel), $dataSource->$displayKey);
+        } elseif ($dataSource && $dataSource->getKey()) {
+            $result = sprintf(__("Change %s: %s"), __($this->objectFrontendLabel), $dataSource->$displayKey);
+        } else {
+            $result = sprintf(__("Create %s"), __($this->objectFrontendLabel));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Important! Overwrite to add object id.
+     * Otherwise, the form (as parent) will not change their livewire component children.
+     *
+     * @param  string  $suffix
+     *
+     * @return string
+     */
+    public function getStableKey(string $suffix = ''): string
+    {
+        return md5(static::class.$this->getName().$this->getId()).$this->formObjectId.$suffix;
+    }
+
+    /**
+     * Overwritten to avoid hidden fields like password
+     *
+     * @param  string  $path
+     * @param  mixed   $value
+     *
+     * @return bool
+     */
+    protected function trySetDataTransferValue(string $path, mixed $value): bool
+    {
+        //if (in_array($path, $this->dataSource->getHidden())) {
+        //    return $this->setArrayValueIfChanged($this->dataCredentials, $path, $value);
+        //}
+        return $this->setArrayValueIfChanged($this->dataTransfer, $path, $value);
+    }
+
+
+}

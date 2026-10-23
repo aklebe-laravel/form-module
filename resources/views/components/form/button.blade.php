@@ -1,0 +1,11 @@
+@php
+    use Modules\Form\app\Http\Livewire\Form\Base\NativeObjectBase;
+
+    /**
+     * @var NativeObjectBase $form_instance
+     * @var array $data
+     */
+@endphp
+<div class="form-group {{ $data['css_group'] }}">
+    @include('form::components.form.button-alone')
+</div>

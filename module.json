@@ -1,0 +1,11 @@
+{
+    "name": "Form",
+    "alias": "form",
+    "description": "Provides frontend forms for custom objects or eloquent models and their relations.",
+    "keywords": [],
+    "priority": 1200,
+    "providers": [
+        "Modules\\Form\\app\\Providers\\FormServiceProvider"
+    ],
+    "files": []
+}

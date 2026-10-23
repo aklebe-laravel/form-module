@@ -1,0 +1,86 @@
+<?php
+declare(strict_types = 1);
+
+namespace Modules\${{module_name}}\app\Http\Livewire\Form;
+
+use Modules\Form\app\Http\Livewire\Form\Base\ModelBase;
+use Modules\Form\app\Services\FormService;
+
+class ${{class_name}} extends ModelBase
+{
+    /**
+     * Relations for using in with().
+     * Don't add fake relations or relations should not be updated!
+     *
+     * Will be used as:
+     * - Blacklist of properties, to save the plain model
+     * - onAfterUpdateItem() to sync() the relations
+     *
+     * @var array[]
+     */
+    public array $objectRelations = [
+    ];
+
+    /**
+     * Singular
+     *
+     * @var string
+     */
+    public string $objectFrontendLabel = 'Item';
+
+    /**
+     * Plural
+     *
+     * @var string
+     */
+    public string $objectsFrontendLabel = 'Items';
+
+    /**
+     *
+     * @return array
+     */
+    public function getFormElements(): array
+    {
+        $parentFormData = parent::getFormElements();
+
+        /** @var FormService $formService */
+        $formService = app(FormService::class);
+
+        return [
+            ... $parentFormData,
+            'title'        => $this->makeFormTitle($this->dataSource, 'id'),
+            'tab_controls' => [
+                'base_item' => [
+                    'tab_pages' => [
+                        [
+                            'tab'     => [
+                                'label' => __('Common'),
+                            ],
+                            'content' => [
+                                'form_elements' => [
+                                    'id'               => [
+                                        'html_element' => 'hidden',
+                                        'label'        => __('ID'),
+                                        'validator'    => ['nullable', 'integer'],
+                                    ],
+                                    'user_id'          => [
+                                        'html_element' => 'hidden',
+                                        'validator'    => ['required', 'integer'],
+                                    ],
+                                    'name'             => [
+                                        'html_element' => 'text',
+                                        'label'        => __('Name'),
+                                        'validator'    => ['string', 'Max:200'],
+                                        'css_group'    => '',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+
+}
